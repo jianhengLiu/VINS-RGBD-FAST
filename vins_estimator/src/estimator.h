@@ -1,5 +1,7 @@
 #pragma once
 
+#include <thread>
+
 #include "parameters.h"
 #include "feature_manager.h"
 #include "utility/utility.h"
@@ -8,6 +10,9 @@
 #include "initial/initial_sfm.h"
 #include "initial/initial_alignment.h"
 #include "initial/initial_ex_rotation.h"
+
+#include "feature_tracker/feature_tracker.h"
+
 #include <std_msgs/Header.h>
 #include <std_msgs/Float32.h>
 
@@ -25,53 +30,69 @@
 
 #include <sophus/se3.h>
 #include <sophus/so3.h>
+
 using Sophus::SE3;
 using Sophus::SO3;
 
-class Estimator
-{
-  public:
+class Estimator {
+public:
     Estimator();
 
     void setParameter();
 
     // interface
     void processIMU(double t, const Vector3d &linear_acceleration, const Vector3d &angular_velocity);
-    void processImage(const map<int, vector<pair<int, Eigen::Matrix<double, 8, 1>>>> &image, const std_msgs::Header &header);
-    void setReloFrame(double _frame_stamp, int _frame_index, vector<Vector3d> &_match_points, Vector3d _relo_t, Matrix3d _relo_r);
+
+    void
+    processImage(const map<int, Eigen::Matrix<double, 8, 1>> &image, const std_msgs::Header &header);
+
+    void setReloFrame(double _frame_stamp, int _frame_index, vector<Vector3d> &_match_points, Vector3d _relo_t,
+                      Matrix3d _relo_r);
 
     // internal
     void clearState();
+
     bool initialStructure();
+
     bool visualInitialAlign();
+
     bool visualInitialAlignWithDepth();
+
     bool relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l);
+
     void slideWindow();
+
     void solveOdometry();
+
     void slideWindowNew();
+
     void slideWindowOld();
+
     void optimization();
+
     void vector2double();
+
     void double2vector();
+
     bool failureDetection();
 
     bool visualReinitialAlignWithDepth();
 
 
-    enum SolverFlag
-    {
+    enum SolverFlag {
         INITIAL,
         NON_LINEAR
     };
 
-    enum MarginalizationFlag
-    {
+    enum MarginalizationFlag {
         MARGIN_OLD = 0,
         MARGIN_SECOND_NEW = 1
     };
 
+    FeatureTracker featureTracker;
+
     SolverFlag solver_flag;
-    MarginalizationFlag  marginalization_flag;
+    MarginalizationFlag marginalization_flag;
     Vector3d g;
     MatrixXd Ap[2], backup_A;
     VectorXd bp[2], backup_b;
@@ -80,7 +101,7 @@ class Estimator
     Vector3d tic[NUM_OF_CAM];
 
 
-	//VIO state vector
+    //VIO state vector
     Vector3d Ps[(WINDOW_SIZE + 1)];
     Vector3d Vs[(WINDOW_SIZE + 1)];
     Matrix3d Rs[(WINDOW_SIZE + 1)];
@@ -99,7 +120,7 @@ class Estimator
     vector<Vector3d> linear_acceleration_buf[(WINDOW_SIZE + 1)];
     vector<Vector3d> angular_velocity_buf[(WINDOW_SIZE + 1)];
 
-    int frame_count;
+    int frame_count;//cl:滑动窗口中帧的数目,最大为滑窗大小
     int sum_of_outlier, sum_of_back, sum_of_front, sum_of_invalid;
 
     FeatureManager f_manager;

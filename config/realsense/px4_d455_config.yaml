@@ -40,7 +40,7 @@ projection_parameters:
    cy: 243.44425225854206
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Don't know anything about extrinsic parameters. You don't need to give R,T. We will try to calibrate it. Do some rotation movement at beginning.
 #If you choose 0 or 1, you should write down the following matrix.
@@ -86,7 +86,7 @@ g_norm: 9.805       # gravity magnitude
 #loop closure parameters
 loop_closure: 1                    # start loop closure
 fast_relocalization: 1             # useful in real-time and large project
-load_previous_pose_graph: 1        # load and reuse previous pose graph; load from 'pose_graph_save_path'
+load_previous_pose_graph: 0        # load and reuse previous pose graph; load from 'pose_graph_save_path'
 pose_graph_save_path: "/home/chrisliu/ROSws_nuc/AtalsSLAM_ws/src/vins-rgbd-atlas/output/pose_graph/" # save and load path
 
 #unsynchronization parameters

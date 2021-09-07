@@ -13,8 +13,8 @@
 #include "camodocal/camera_models/CataCamera.h"
 #include "camodocal/camera_models/PinholeCamera.h"
 
-#include "parameters.h"
-#include "tic_toc.h"
+#include "../parameters.h"
+#include "../utility/tic_toc.h"
 
 using namespace std;
 using namespace camodocal;
@@ -46,6 +46,7 @@ public:
 
     void rejectWithF();
 
+
     void undistortedPoints();
 
     void predictPtsInNextFrame(Matrix3d relative_R);
@@ -75,6 +76,4 @@ public:
     static int n_id;
 
     bool hasPrediction = false;
-
-    cv::Ptr<cv::FastFeatureDetector> p_fast_feature_detector;
 };

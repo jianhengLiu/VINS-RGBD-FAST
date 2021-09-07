@@ -20,6 +20,8 @@
 #include "../parameters.h"
 #include <fstream>
 
+#include <cv_bridge/cv_bridge.h>
+
 extern ros::Publisher pub_odometry;
 extern ros::Publisher pub_path, pub_pose;
 extern ros::Publisher pub_cloud, pub_map;
@@ -32,7 +34,8 @@ extern int IMAGE_ROW, IMAGE_COL;
 
 void registerPub(ros::NodeHandle &n);
 
-void pubLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q, const Eigen::Vector3d &V, const std_msgs::Header &header);
+void pubLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q, const Eigen::Vector3d &V,
+                       const std_msgs::Header &header);
 
 void printStatistics(const Estimator &estimator, double t);
 
@@ -44,6 +47,8 @@ void pubKeyPoses(const Estimator &estimator, const std_msgs::Header &header);
 
 void pubCameraPose(const Estimator &estimator, const std_msgs::Header &header);
 
+void pubIMUPose(const Estimator &estimator, const std_msgs::Header &header);
+
 void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header);
 
 void pubTF(const Estimator &estimator, const std_msgs::Header &header);
@@ -51,3 +56,7 @@ void pubTF(const Estimator &estimator, const std_msgs::Header &header);
 void pubKeyframe(const Estimator &estimator);
 
 void pubRelocalization(const Estimator &estimator);
+
+void pubTrackImg(const cv_bridge::CvImageConstPtr &img_ptr);
+
+void pubTrackImg(const sensor_msgs::ImagePtr &img_msg);

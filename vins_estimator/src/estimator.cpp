@@ -14,6 +14,19 @@ void Estimator::setParameter() {
     ProjectionFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
     ProjectionTdFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
     td = TD;
+    g = G;
+
+    featureTracker.readIntrinsicParameter(CAM_NAMES);
+    if (FISHEYE) {
+        featureTracker.fisheye_mask = cv::imread(FISHEYE_MASK, 0);
+        if (!featureTracker.fisheye_mask.data) {
+            ROS_INFO("load mask fail");
+            ROS_BREAK();
+        } else
+            ROS_INFO("load mask success");
+    }
+
+//    processThread   = std::thread(&Estimator::processMeasurements, this);
 }
 
 void Estimator::clearState() {
@@ -103,14 +116,14 @@ void Estimator::processIMU(double dt, const Vector3d &linear_acceleration, const
     gyr_0 = angular_velocity;
 }
 
-void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<double, 8, 1>>>> &image,
+void Estimator::processImage(const map<int, Eigen::Matrix<double, 8, 1>> &image,
                              const std_msgs::Header &header) {
     ROS_DEBUG("new image coming ------------------------------------------");
     ROS_DEBUG("Adding feature points %lu", image.size());
     // FeaturePerFrame
     // FeaturePerId
     // feature
-    if (f_manager.addFeatureCheckParallax(frame_count, image, td))
+    if (f_manager.addFeatureCheckParallax(frame_count, image, td, header.stamp.toSec()))
         marginalization_flag = MARGIN_OLD;
     else
         marginalization_flag = MARGIN_SECOND_NEW;
@@ -304,16 +317,16 @@ bool Estimator::initialStructure() {
         //points: map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>>
         for (auto &id_pts : frame_it->second.points) {
             int feature_id = id_pts.first;
-            for (auto &i_p : id_pts.second) {
-                it = sfm_tracked_points.find(feature_id);
-                if (it != sfm_tracked_points.end()) {
-                    Vector3d world_pts = it->second;
-                    cv::Point3f pts_3(world_pts(0), world_pts(1), world_pts(2));
-                    pts_3_vector.push_back(pts_3);
-                    Vector2d img_pts = i_p.second.head<2>();
-                    cv::Point2f pts_2(img_pts(0), img_pts(1));
-                    pts_2_vector.push_back(pts_2);
-                }
+            it = sfm_tracked_points.find(feature_id);
+            if (it != sfm_tracked_points.end()) {
+                Vector3d world_pts = it->second;
+                cv::Point3f pts_3(world_pts(0), world_pts(1), world_pts(2));
+                pts_3_vector.push_back(pts_3);
+//                Vector2d img_pts = id_pts.second.head<2>();
+//                cout << endl << "id_pts.second.head<2>():" << id_pts.second.head<2>() << endl;
+//                cout << endl << "id_pts.second.head<0>():" << id_pts.second.head<0>() << endl;
+                cv::Point2f pts_2(id_pts.second(3), id_pts.second(3));
+                pts_2_vector.push_back(pts_2);
             }
         }
         cv::Mat K = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);

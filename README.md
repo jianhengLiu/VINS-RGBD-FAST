@@ -1,4 +1,11 @@
+# VINS-RGBD-FAST
+
+VINS-RGBD-FAST is a SLAM system based on VINS-RGBD. We do some refinements to accelerate the system's performance in resource-constrained embedded paltform, like HUAWEI Atlas 200DK.
+
+
+
 ## RGBD-Inertial Trajectory Estimation and Mapping for Small Ground Rescue Robot
+
 Based one open source SLAM framework [VINS-Mono](https://github.com/HKUST-Aerial-Robotics/VINS-Mono).
 
 The approach contains
