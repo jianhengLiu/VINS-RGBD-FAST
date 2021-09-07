@@ -187,34 +187,31 @@ Matrix3d integrateImuData() {
     if (tmp_imu_buf.empty() || prev_image_time == 0 || last_image_time == 0)
         return Matrix3d::Identity();
 
-    // Compute the mean angular velocity in the IMU frame.
-    Vector3d mean_ang_vel(0.0, 0.0, 0.0);
-    int cnt = 0;
+    Eigen::Quaterniond rel_Q;
+    Eigen::Vector3d last_gyr;
+    double last_t = 0;
     while (!tmp_imu_buf.empty()) {
         double t = tmp_imu_buf.front()->header.stamp.toSec();
         if ((t - prev_image_time) > -0.01 && (t - last_image_time) < 0.005) {
-            mean_ang_vel += Vector3d(tmp_imu_buf.front()->angular_velocity.x, tmp_imu_buf.front()->angular_velocity.y,
-                                     tmp_imu_buf.front()->angular_velocity.z);
-            cnt++;
+            if (last_t == 0) {
+                last_t = t;
+                continue;
+            }
+            double dt = t - last_t;
+            last_t = t;
+
+            double rx = tmp_imu_buf.front()->angular_velocity.x;
+            double ry = tmp_imu_buf.front()->angular_velocity.y;
+            double rz = tmp_imu_buf.front()->angular_velocity.z;
+            Eigen::Vector3d angular_velocity{rx, ry, rz};
+
+            Eigen::Vector3d un_gyr = 0.5 * (last_gyr + angular_velocity) - tmp_Bg;
+            rel_Q = rel_Q * Utility::deltaQ(un_gyr * dt);
+            last_gyr = angular_velocity;
         }
         tmp_imu_buf.pop();
     }
-    if (cnt > 0)
-        mean_ang_vel *= 1.0f / cnt;
-    else
-        return Matrix3d::Identity();
-
-    mean_ang_vel -= tmp_Bg;
-    // Transform the mean angular velocity from the IMU
-    // frame to the cam0 frames.
-    Vector3d cam0_mean_ang_vel = Ric.transpose() * mean_ang_vel;
-
-    // Compute the relative rotation.
-    double dtime = last_image_time - prev_image_time;
-    Vector3d cam0_angle_axisd = cam0_mean_ang_vel * dtime;
-
-    return AngleAxisd(cam0_angle_axisd.norm(), cam0_angle_axisd.normalized()).toRotationMatrix().transpose();
-
+    return Ric.transpose() * rel_Q.toRotationMatrix();
 }
 
 void img_callback(const sensor_msgs::CompressedImageConstPtr &color_msg,
