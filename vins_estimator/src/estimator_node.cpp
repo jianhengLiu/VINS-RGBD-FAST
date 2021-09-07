@@ -39,7 +39,6 @@ int sum_of_wait = 0;
 
 std::mutex m_buf;
 std::mutex m_state;
-std::mutex m_imu;
 std::mutex m_estimator;
 std::mutex m_tracker;
 std::mutex m_vis;
@@ -84,6 +83,7 @@ void predict(const sensor_msgs::ImuConstPtr &imu_msg) {
     Eigen::Vector3d un_acc_1 = tmp_Q * (linear_acceleration - tmp_Ba) - estimator.g;
 
     Eigen::Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
+
 
     tmp_P = tmp_P + dt * tmp_V + 0.5 * dt * dt * un_acc;
     tmp_V = tmp_V + dt * un_acc;
@@ -154,7 +154,6 @@ double last_image_time = 0;
 double prev_image_time = 0;
 bool init_pub = 0;
 int pub_count = 1;
-std::vector<sensor_msgs::Imu> imu_msg_buffer;
 queue<sensor_msgs::CompressedImageConstPtr> vis_img_buf;
 
 void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg) {
@@ -163,12 +162,6 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg) {
         return;
     }
     last_imu_t = imu_msg->header.stamp.toSec();
-
-    // Wait for the first image to be set.
-    if (first_image_flag) return;
-    m_imu.lock();
-    imu_msg_buffer.push_back(*imu_msg);
-    m_imu.unlock();
 
     m_buf.lock();
     imu_buf.push(imu_msg);
@@ -190,38 +183,28 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg) {
 }
 
 Matrix3d integrateImuData() {
-    m_imu.lock();
-    if (imu_msg_buffer.empty()) {
-        std::cout << "empty IMU!" << std::endl;
+    queue<sensor_msgs::ImuConstPtr> tmp_imu_buf = imu_buf;
+    if (tmp_imu_buf.empty() || prev_image_time == 0 || last_image_time == 0)
         return Matrix3d::Identity();
-    }
-    // Find the start and the end limit within the imu msg buffer.
-    auto begin_iter = imu_msg_buffer.begin();
-    while (begin_iter != imu_msg_buffer.end()) {
-        if ((begin_iter->header.stamp.toSec() - last_image_time) < -0.01)
-            ++begin_iter;
-        else
-            break;
-    }
-
-    auto end_iter = begin_iter;
-    while (end_iter != imu_msg_buffer.end()) {
-        if ((end_iter->header.stamp.toSec() - last_image_time) < 0.005)
-            ++end_iter;
-        else
-            break;
-    }
 
     // Compute the mean angular velocity in the IMU frame.
     Vector3d mean_ang_vel(0.0, 0.0, 0.0);
-    for (auto iter = begin_iter; iter < end_iter; ++iter)
-        mean_ang_vel += Vector3d(iter->angular_velocity.x,
-                                 iter->angular_velocity.y, iter->angular_velocity.z);
+    int cnt = 0;
+    while (!tmp_imu_buf.empty()) {
+        double t = tmp_imu_buf.front()->header.stamp.toSec();
+        if ((t - prev_image_time) > -0.01 && (t - last_image_time) < 0.005) {
+            mean_ang_vel += Vector3d(tmp_imu_buf.front()->angular_velocity.x, tmp_imu_buf.front()->angular_velocity.y,
+                                     tmp_imu_buf.front()->angular_velocity.z);
+            cnt++;
+        }
+        tmp_imu_buf.pop();
+    }
+    if (cnt > 0)
+        mean_ang_vel *= 1.0f / cnt;
+    else
+        return Matrix3d::Identity();
 
-    if (end_iter - begin_iter > 0)
-        mean_ang_vel *= 1.0f / (end_iter - begin_iter);
-    m_imu.unlock();
-
+    mean_ang_vel -= tmp_Bg;
     // Transform the mean angular velocity from the IMU
     // frame to the cam0 frames.
     Vector3d cam0_mean_ang_vel = Ric.transpose() * mean_ang_vel;
@@ -230,9 +213,8 @@ Matrix3d integrateImuData() {
     double dtime = last_image_time - prev_image_time;
     Vector3d cam0_angle_axisd = cam0_mean_ang_vel * dtime;
 
-    // Delete the useless and used imu messages.
-    imu_msg_buffer.erase(imu_msg_buffer.begin(), end_iter);
     return AngleAxisd(cam0_angle_axisd.norm(), cam0_angle_axisd.normalized()).toRotationMatrix().transpose();
+
 }
 
 void img_callback(const sensor_msgs::CompressedImageConstPtr &color_msg,

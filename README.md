@@ -2,7 +2,14 @@
 
 VINS-RGBD-FAST is a SLAM system based on VINS-RGBD. We do some refinements to accelerate the system's performance in resource-constrained embedded paltform, like HUAWEI Atlas 200DK.
 
+## Refinements
 
+* extract FAST feature instead of Harris feature
+* added stationary initialization
+* added IMU-aided feature tracking
+* added extracted-feature area's quality judgement
+* solved feature clusttering problem result frome FAST feature
+* use "sensor_msg::CompressedImage" as image topic type
 
 ## RGBD-Inertial Trajectory Estimation and Mapping for Small Ground Rescue Robot
 
