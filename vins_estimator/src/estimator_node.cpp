@@ -300,7 +300,7 @@ void process_tracker() {
         cv::Mat show_img = ptr->image;
         TicToc t_r;
         ROS_DEBUG("processing camera");
-        Matrix3d relative_R = integrateImuData();
+        Matrix3d relative_R = Matrix3d::Identity();//integrateImuData();
         estimator.featureTracker.readImage(ptr->image.rowRange(0, ROW),
                                            color_msg->header.stamp.toSec(),
                                            relative_R);

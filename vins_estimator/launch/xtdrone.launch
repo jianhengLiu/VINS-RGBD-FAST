@@ -1,5 +1,5 @@
 <launch>
-    <arg name="config_path" default = "$(find vins_estimator)/../config/realsense/x7pro_d455_config.yaml" />
+    <arg name="config_path" default = "$(find vins_estimator)/../config/xtdrone_sitl/xtdrone.yaml" />
     <arg name="vins_path" default = "$(find vins_estimator)/../config/../" />
 
     <node name="vins_estimator" pkg="vins_estimator" type="vins_estimator" output="screen">
@@ -16,4 +16,3 @@
     </node>
 
 </launch>
-

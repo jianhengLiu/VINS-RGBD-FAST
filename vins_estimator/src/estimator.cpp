@@ -49,7 +49,7 @@ void Estimator::clearState() {
         tic[i] = Vector3d::Zero();
         ric[i] = Matrix3d::Identity();
     }
-    for (auto &it : all_image_frame) {
+    for (auto &it: all_image_frame) {
         if (it.second.pre_integration != nullptr) {
             delete it.second.pre_integration;
             it.second.pre_integration = nullptr;
@@ -218,6 +218,7 @@ void Estimator::processImage(const map<int, Eigen::Matrix<double, 8, 1>> &image,
 bool Estimator::initialStructure() {
     //check imu observibility
     bool is_imu_excited = false;
+    Vector3d aver_g;
     {
         map<double, ImageFrame>::iterator frame_it;
         Vector3d sum_g;
@@ -226,7 +227,6 @@ bool Estimator::initialStructure() {
             Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;
             sum_g += tmp_g;
         }
-        Vector3d aver_g;
         aver_g = sum_g * 1.0 / ((int) all_image_frame.size() - 1);
         double var = 0;
         for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++) {
@@ -251,12 +251,12 @@ bool Estimator::initialStructure() {
     Vector3d T[frame_count + 1];
     map<int, Vector3d> sfm_tracked_points;
     vector<SFMFeature> sfm_f;
-    for (auto &it_per_id : f_manager.feature) {
+    for (auto &it_per_id: f_manager.feature) {
         int imu_j = it_per_id.start_frame - 1;
         SFMFeature tmp_feature;
         tmp_feature.state = false;
         tmp_feature.id = it_per_id.feature_id;
-        for (auto &it_per_frame : it_per_id.feature_per_frame) {
+        for (auto &it_per_frame: it_per_id.feature_per_frame) {
             imu_j++;
             Vector3d pts_j = it_per_frame.point;
             tmp_feature.observation.push_back(make_pair(imu_j, Eigen::Vector2d{pts_j.x(), pts_j.y()}));
@@ -315,7 +315,7 @@ bool Estimator::initialStructure() {
         vector<cv::Point3f> pts_3_vector;
         vector<cv::Point2f> pts_2_vector;
         //points: map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>>
-        for (auto &id_pts : frame_it->second.points) {
+        for (auto &id_pts: frame_it->second.points) {
             int feature_id = id_pts.first;
             it = sfm_tracked_points.find(feature_id);
             if (it != sfm_tracked_points.end()) {
@@ -368,17 +368,17 @@ bool Estimator::initialStructure() {
     if (visualInitialAlignWithDepth()) {
         if (!is_imu_excited) {
             // 利用加速度平均值估计Bas
-            map<double, ImageFrame>::iterator frame_it;
-            Vector3d sum_a(0, 0, 0);
-            for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++) {
-                double dt = frame_it->second.pre_integration->sum_dt;
-                Vector3d tmp_a = frame_it->second.pre_integration->delta_v / dt;
-                sum_a += tmp_a;
-            }
-            Vector3d avg_a;
-            avg_a = sum_a * 1.0 / ((int) all_image_frame.size() - 1);
+//            map<double, ImageFrame>::iterator frame_it;
+//            Vector3d sum_a(0, 0, 0);
+//            for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++) {
+//                double dt = frame_it->second.pre_integration->sum_dt;
+//                Vector3d tmp_a = frame_it->second.pre_integration->delta_v / dt;
+//                sum_a += tmp_a;
+//            }
+//            Vector3d avg_a;
+//            avg_a = sum_a * 1.0 / ((int) all_image_frame.size() - 1);
 
-            Vector3d tmp_Bas = avg_a - Utility::g2R(avg_a).inverse() * G;
+            Vector3d tmp_Bas = aver_g - Utility::g2R(aver_g).inverse() * G;
             ROS_WARN_STREAM("accelerator bias initial calibration " << tmp_Bas.transpose());
             for (int i = 0; i <= WINDOW_SIZE; i++) {
                 Bas[i] = tmp_Bas;
@@ -440,7 +440,7 @@ bool Estimator::visualInitialAlign() {
             Vs[kv] = frame_i->second.R * x.segment<3>(kv * 3);
         }
     }
-    for (auto &it_per_id : f_manager.feature) {
+    for (auto &it_per_id: f_manager.feature) {
         it_per_id.used_num = it_per_id.feature_per_frame.size();
         if (!(it_per_id.used_num >= 2 && it_per_id.start_frame < WINDOW_SIZE - 2))
             continue;
@@ -940,7 +940,7 @@ void Estimator::optimization() {
     //重投影残差相关，此时使用了Huber损失核函数
     int f_m_cnt = 0;
     int feature_index = -1;
-    for (auto &it_per_id : f_manager.feature) {
+    for (auto &it_per_id: f_manager.feature) {
         it_per_id.used_num = it_per_id.feature_per_frame.size();
         if (!(it_per_id.used_num >= 2 && it_per_id.start_frame < WINDOW_SIZE - 2))
             continue;
@@ -951,7 +951,7 @@ void Estimator::optimization() {
 
         Vector3d pts_i = it_per_id.feature_per_frame[0].point;
 
-        for (auto &it_per_frame : it_per_id.feature_per_frame) //遍历观测到路标点的图像帧
+        for (auto &it_per_frame: it_per_id.feature_per_frame) //遍历观测到路标点的图像帧
         {
             imu_j++;
             if (imu_i == imu_j) {
@@ -1015,7 +1015,7 @@ void Estimator::optimization() {
         problem.AddParameterBlock(relo_Pose, SIZE_POSE, local_parameterization);
         int retrive_feature_index = 0;
         int feature_index = -1;
-        for (auto &it_per_id : f_manager.feature) {
+        for (auto &it_per_id: f_manager.feature) {
             it_per_id.used_num = it_per_id.feature_per_frame.size();
             if (!(it_per_id.used_num >= 2 && it_per_id.start_frame < WINDOW_SIZE - 2))
                 continue;
@@ -1105,7 +1105,7 @@ void Estimator::optimization() {
         //图像部分，基于与第0帧相关的图像残差，边缘化第一次观测的图像帧为第0帧的路标点和第0帧
         {
             int feature_index = -1;
-            for (auto &it_per_id : f_manager.feature) {
+            for (auto &it_per_id: f_manager.feature) {
                 it_per_id.used_num = it_per_id.feature_per_frame.size();
                 if (!(it_per_id.used_num >= 2 && it_per_id.start_frame < WINDOW_SIZE - 2))
                     continue;
@@ -1118,7 +1118,7 @@ void Estimator::optimization() {
 
                 Vector3d pts_i = it_per_id.feature_per_frame[0].point;
 
-                for (auto &it_per_frame : it_per_id.feature_per_frame) //对观测到路标点的图像帧的遍历
+                for (auto &it_per_frame: it_per_id.feature_per_frame) //对观测到路标点的图像帧的遍历
                 {
                     imu_j++;
                     if (imu_i == imu_j)
