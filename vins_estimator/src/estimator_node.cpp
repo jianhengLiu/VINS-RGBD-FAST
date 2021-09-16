@@ -179,6 +179,42 @@ Matrix3d integrateImuData() {
     if (tmp_imu_buf.empty() || prev_image_time == 0 || last_image_time == 0)
         return Matrix3d::Identity();
 
+    int n_ang = 0;
+    // Compute the mean angular velocity in the IMU frame.
+    Vector3d mean_ang_vel(0.0, 0.0, 0.0);
+    while (!tmp_imu_buf.empty()) {
+        double t = tmp_imu_buf.front()->header.stamp.toSec();
+        if ((t - prev_image_time) > -0.01 && (t - last_image_time) < 0.005) {
+            double rx = tmp_imu_buf.front()->angular_velocity.x;
+            double ry = tmp_imu_buf.front()->angular_velocity.y;
+            double rz = tmp_imu_buf.front()->angular_velocity.z;
+            Eigen::Vector3d angular_velocity{rx, ry, rz};
+
+            mean_ang_vel += angular_velocity;
+            n_ang++;
+
+        } else if ((t - last_image_time) > 0.005)
+            break;
+        tmp_imu_buf.pop();
+    }
+    if (n_ang > 0)
+        mean_ang_vel *= 1.0f / n_ang;
+
+    // Transform the mean angular velocity from the IMU
+    // frame to the cam0 frames.
+    Vector3d cam0_mean_ang_vel = RIC.back().transpose() * mean_ang_vel;
+
+    // Compute the relative rotation.
+    double dtime = last_image_time - prev_image_time;
+    Vector3d cam0_angle_axisd = cam0_mean_ang_vel * dtime;
+
+    return AngleAxisd(cam0_angle_axisd.norm(), cam0_angle_axisd.normalized()).toRotationMatrix().transpose();
+
+
+/*    queue<sensor_msgs::ImuConstPtr> tmp_imu_buf = imu_buf;
+    if (tmp_imu_buf.empty() || prev_image_time == 0 || last_image_time == 0)
+        return Matrix3d::Identity();
+
     Eigen::Quaterniond rel_Q;
     Eigen::Vector3d last_gyr;
     double last_t = 0;
@@ -198,13 +234,17 @@ Matrix3d integrateImuData() {
             Eigen::Vector3d angular_velocity{rx, ry, rz};
 
             Eigen::Vector3d un_gyr = 0.5 * (last_gyr + angular_velocity) - tmp_Bg;
-	    un_gyr = RIC.back().transpose() * un_gyr;
+//            un_gyr = RIC.back().transpose() * un_gyr;
+
+            cout << "un_gyr" << endl << un_gyr << endl;
             rel_Q = rel_Q * Utility::deltaQ(un_gyr * dt);
             last_gyr = angular_velocity;
-        }
+        } else if ((t - last_image_time) > 0.005)
+            break;
         tmp_imu_buf.pop();
     }
-    return rel_Q.toRotationMatrix();
+    cout << "rel_Q.toRotationMatrix()" << endl << rel_Q.toRotationMatrix() << endl;
+    return rel_Q.toRotationMatrix();*/
 }
 
 void img_callback(const sensor_msgs::CompressedImageConstPtr &color_msg,
