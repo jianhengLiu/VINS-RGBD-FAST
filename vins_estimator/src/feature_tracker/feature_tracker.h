@@ -59,10 +59,10 @@ public:
 
     cv::Mat mask, mask_exp;
     cv::Mat fisheye_mask;
-    cv::Mat prev_img, cur_img, forw_img;
+    cv::Mat cur_img, forw_img;
     vector<cv::Point2f> n_pts;
     vector<cv::KeyPoint> Keypts;
-    vector<cv::Point2f> prev_pts, cur_pts, forw_pts, predict_pts, unstable_pts;
+    vector<cv::Point2f> cur_pts, forw_pts, predict_pts, unstable_pts;
     vector<cv::Point2f> prev_un_pts, cur_un_pts;
     vector<cv::Point2f> pts_velocity;
     vector<int> ids;
@@ -76,4 +76,5 @@ public:
     static int n_id;
 
     bool hasPrediction = false;
+    cv::Ptr<cv::FastFeatureDetector> p_fast_feature_detector;
 };

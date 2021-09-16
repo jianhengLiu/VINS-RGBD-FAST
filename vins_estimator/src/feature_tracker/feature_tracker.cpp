@@ -26,6 +26,7 @@ void reduceVector(vector<int> &v, vector<uchar> status) {
 }
 
 FeatureTracker::FeatureTracker() {
+    p_fast_feature_detector = cv::FastFeatureDetector::create();
 }
 
 void FeatureTracker::setMask() {
@@ -97,13 +98,6 @@ void FeatureTracker::addPoints(int n_max_cnt) {
     }
 }
 
-
-int cnt_frame = 0;
-double OpticalFlow_time = 0;
-double succ_num = 0;
-double total_num = 0;
-
-cv::Ptr<cv::FastFeatureDetector> p_fast_feature_detector = cv::FastFeatureDetector::create();
 void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, Matrix3d relative_R) {
     cv::Mat img;
     TicToc t_r;
@@ -119,7 +113,7 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, Matrix3d r
 
     if (forw_img.empty()) {
         //curr_img<--->forw_img
-        prev_img = cur_img = forw_img = img;
+        cur_img = forw_img = img;
     } else {
         forw_img = img;
     }
@@ -138,19 +132,6 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, Matrix3d r
                                  cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
                                  cv::OPTFLOW_USE_INITIAL_FLOW);
 
-//        int succ_num_temp = 0;
-//        for (size_t i = 0; i < status.size(); i++) {
-//            if (status[i])
-//                succ_num_temp++;
-//        }
-//        if (succ_num_temp < 10)
-//        {
-//            /**
-//            * 上一帧，当前帧，上一帧特征点，当前帧匹配的特征点，对应特征点是否跟踪成功的状态（0/1），对应特征点的误差，每层金字塔搜索窗口，用几层金字塔
-//            */
-//            cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3);
-//        }
-
         for (int i = 0; i < int(forw_pts.size()); i++) {
             if (!status[i] && inBorder(forw_pts[i])) {
                 unstable_pts.push_back(forw_pts[i]);
@@ -159,7 +140,6 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, Matrix3d r
             }
         }
 
-        reduceVector(prev_pts, status);
         reduceVector(cur_pts, status);
         reduceVector(forw_pts, status);
         reduceVector(ids, status);
@@ -167,23 +147,13 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, Matrix3d r
         reduceVector(track_cnt, status);
 
         ROS_DEBUG("temporal optical flow costs: %fms", t_o.toc());
-        //  光流准确率，时间输出
-//        OpticalFlow_time += t_o.toc();
-//        cnt_frame++;
-//        printf("average optical flow costs: %fms\n", OpticalFlow_time / (double) cnt_frame);
-//        for (size_t i = 0; i < status.size(); i++) {
-//            if (status[i])
-//                succ_num++;
-//        }
-//        total_num += status.size();
-//        printf("average success ratio: %f\n", succ_num / total_num);
     }
 
     for (auto &n : track_cnt)
         n++;
 
     if (PUB_THIS_FRAME) {
-        //对prev_pts和forw_pts做ransac剔除outlier.
+        //对cur_pts和forw_pts做ransac剔除outlier.
         rejectWithF();
         ROS_DEBUG("set mask begins");
         TicToc t_m;
@@ -204,11 +174,6 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, Matrix3d r
             TicToc t_t_fast;
 
             p_fast_feature_detector->detect(forw_img, Keypts, mask);
-
-//            OpticalFlow_time += t_t_fast.toc();
-//            cnt_frame++;
-//            printf("average detect Harris feature costs: %fms\n", OpticalFlow_time / (double) cnt_frame);
-
         } else {
             n_pts.clear();
             Keypts.clear();
@@ -219,13 +184,7 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, Matrix3d r
         TicToc t_a;
         addPoints(n_max_cnt);// cl:modified addPoints
         ROS_DEBUG("selectFeature costs: %fms", t_a.toc());
-
-//        OpticalFlow_time += t_t.toc();
-//        cnt_frame++;
-//        printf("average detect Harris feature costs: %fms\n", OpticalFlow_time / (double) cnt_frame);
     }
-    prev_img = cur_img;
-    prev_pts = cur_pts;
     prev_un_pts = cur_un_pts;
     cur_img = forw_img;
     cur_pts = forw_pts;
@@ -255,7 +214,6 @@ void FeatureTracker::rejectWithF() {
         vector<uchar> status;
         cv::findFundamentalMat(un_cur_pts, un_forw_pts, cv::FM_RANSAC, F_THRESHOLD, 0.99, status);
         int size_a = cur_pts.size();
-        reduceVector(prev_pts, status);
         reduceVector(cur_pts, status);
         reduceVector(forw_pts, status);
         reduceVector(cur_un_pts, status);
