@@ -1,11 +1,3 @@
-#define BACKWARD_HAS_DW 1
-
-#include "backward.hpp"
-
-namespace backward {
-    backward::SignalHandling sh;
-}
-
 #include <stdio.h>
 #include <queue>
 #include <map>
@@ -206,12 +198,13 @@ Matrix3d integrateImuData() {
             Eigen::Vector3d angular_velocity{rx, ry, rz};
 
             Eigen::Vector3d un_gyr = 0.5 * (last_gyr + angular_velocity) - tmp_Bg;
+	    un_gyr = RIC.back().transpose() * un_gyr;
             rel_Q = rel_Q * Utility::deltaQ(un_gyr * dt);
             last_gyr = angular_velocity;
         }
         tmp_imu_buf.pop();
     }
-    return Ric.transpose() * rel_Q.toRotationMatrix();
+    return rel_Q.toRotationMatrix();
 }
 
 void img_callback(const sensor_msgs::CompressedImageConstPtr &color_msg,

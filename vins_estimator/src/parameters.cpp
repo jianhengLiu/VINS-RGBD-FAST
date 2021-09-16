@@ -35,7 +35,6 @@ std::string FISHEYE_MASK;
 std::string CAM_NAMES;
 int STEREO_TRACK;
 bool PUB_THIS_FRAME;
-Eigen::Matrix3d Ric;
 
 double ROW, COL;
 int IMAGE_SIZE;
@@ -156,7 +155,6 @@ void readParameters(ros::NodeHandle &n) {
         cv::cv2eigen(cv_T, eigen_T);
         Eigen::Quaterniond Q(eigen_R);
         eigen_R = Q.normalized();
-        Ric = eigen_R;
         RIC.push_back(eigen_R);
         TIC.push_back(eigen_T);
         ROS_INFO_STREAM("Extrinsic_R : " << std::endl << RIC[0]);
@@ -272,7 +270,6 @@ void readParameters(std::string config_file) {
         cv::cv2eigen(cv_T, eigen_T);
         Eigen::Quaterniond Q(eigen_R);
         eigen_R = Q.normalized();
-        Ric = eigen_R;
         RIC.push_back(eigen_R);
         TIC.push_back(eigen_T);
         ROS_INFO_STREAM("Extrinsic_R : " << std::endl << RIC[0]);

@@ -56,7 +56,6 @@ extern std::string FISHEYE_MASK;
 extern std::string CAM_NAMES;
 extern int STEREO_TRACK;
 extern bool PUB_THIS_FRAME;
-extern Eigen::Matrix3d Ric;
 
 extern std::vector<std::string> SEMANTIC_LABEL;
 extern std::vector<std::string> STATIC_LABEL;
