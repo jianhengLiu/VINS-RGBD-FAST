@@ -128,7 +128,7 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, Matrix3d r
 
         predictPtsInNextFrame(relative_R);
         forw_pts = predict_pts;
-        cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3,
+        cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 1,
                                  cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
                                  cv::OPTFLOW_USE_INITIAL_FLOW);
 

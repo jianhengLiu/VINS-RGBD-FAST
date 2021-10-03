@@ -33,7 +33,6 @@ std::mutex m_buf;
 std::mutex m_state;
 std::mutex m_estimator;
 std::mutex m_tracker;
-std::mutex m_vis;
 
 double latest_time;
 Eigen::Vector3d tmp_P;
@@ -47,6 +46,7 @@ bool init_feature = 0;
 bool init_imu = 1;
 double last_imu_t = 0;
 
+Matrix3d relative_R = Matrix3d::Identity();
 void predict(const sensor_msgs::ImuConstPtr &imu_msg) {
     double t = imu_msg->header.stamp.toSec();
     if (init_imu) {
@@ -71,6 +71,16 @@ void predict(const sensor_msgs::ImuConstPtr &imu_msg) {
 
     Eigen::Vector3d un_gyr = 0.5 * (gyr_0 + angular_velocity) - tmp_Bg;
     tmp_Q = tmp_Q * Utility::deltaQ(un_gyr * dt);
+
+    // cl
+    // Transform the mean angular velocity from the IMU
+    // frame to the cam0 frames.
+    Vector3d cam0_mean_ang_vel = RIC.back().transpose() * un_gyr;
+
+    // Compute the relative rotation.
+    Vector3d cam0_angle_axisd = cam0_mean_ang_vel * dt;
+    relative_R *= AngleAxisd(cam0_angle_axisd.norm(), cam0_angle_axisd.normalized()).toRotationMatrix();
+    // cl
 
     Eigen::Vector3d un_acc_1 = tmp_Q * (linear_acceleration - tmp_Ba) - estimator.g;
 
@@ -146,8 +156,6 @@ double last_image_time = 0;
 double prev_image_time = 0;
 bool init_pub = 0;
 int pub_count = 1;
-queue<sensor_msgs::CompressedImageConstPtr> vis_img_buf;
-
 void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg) {
     if (imu_msg->header.stamp.toSec() <= last_imu_t) {
         ROS_WARN("imu message in disorder! %f", imu_msg->header.stamp.toSec());
@@ -172,79 +180,6 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg) {
         if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
             pubLatestOdometry(tmp_P, tmp_Q, tmp_V, header);
     }
-}
-
-Matrix3d integrateImuData() {
-    queue<sensor_msgs::ImuConstPtr> tmp_imu_buf = imu_buf;
-    if (tmp_imu_buf.empty() || prev_image_time == 0 || last_image_time == 0)
-        return Matrix3d::Identity();
-
-    int n_ang = 0;
-    // Compute the mean angular velocity in the IMU frame.
-    Vector3d mean_ang_vel(0.0, 0.0, 0.0);
-    while (!tmp_imu_buf.empty()) {
-        double t = tmp_imu_buf.front()->header.stamp.toSec();
-        if ((t - prev_image_time) > -0.01 && (t - last_image_time) < 0.005) {
-            double rx = tmp_imu_buf.front()->angular_velocity.x;
-            double ry = tmp_imu_buf.front()->angular_velocity.y;
-            double rz = tmp_imu_buf.front()->angular_velocity.z;
-            Eigen::Vector3d angular_velocity{rx, ry, rz};
-
-            mean_ang_vel += angular_velocity;
-            n_ang++;
-
-        } else if ((t - last_image_time) > 0.005)
-            break;
-        tmp_imu_buf.pop();
-    }
-    if (n_ang > 0)
-        mean_ang_vel *= 1.0f / n_ang;
-
-    // Transform the mean angular velocity from the IMU
-    // frame to the cam0 frames.
-    Vector3d cam0_mean_ang_vel = RIC.back().transpose() * mean_ang_vel;
-
-    // Compute the relative rotation.
-    double dtime = last_image_time - prev_image_time;
-    Vector3d cam0_angle_axisd = cam0_mean_ang_vel * dtime;
-
-    return AngleAxisd(cam0_angle_axisd.norm(), cam0_angle_axisd.normalized()).toRotationMatrix().transpose();
-
-
-/*    queue<sensor_msgs::ImuConstPtr> tmp_imu_buf = imu_buf;
-    if (tmp_imu_buf.empty() || prev_image_time == 0 || last_image_time == 0)
-        return Matrix3d::Identity();
-
-    Eigen::Quaterniond rel_Q;
-    Eigen::Vector3d last_gyr;
-    double last_t = 0;
-    while (!tmp_imu_buf.empty()) {
-        double t = tmp_imu_buf.front()->header.stamp.toSec();
-        if ((t - prev_image_time) > -0.01 && (t - last_image_time) < 0.005) {
-            if (last_t == 0) {
-                last_t = t;
-                continue;
-            }
-            double dt = t - last_t;
-            last_t = t;
-
-            double rx = tmp_imu_buf.front()->angular_velocity.x;
-            double ry = tmp_imu_buf.front()->angular_velocity.y;
-            double rz = tmp_imu_buf.front()->angular_velocity.z;
-            Eigen::Vector3d angular_velocity{rx, ry, rz};
-
-            Eigen::Vector3d un_gyr = 0.5 * (last_gyr + angular_velocity) - tmp_Bg;
-//            un_gyr = RIC.back().transpose() * un_gyr;
-
-            cout << "un_gyr" << endl << un_gyr << endl;
-            rel_Q = rel_Q * Utility::deltaQ(un_gyr * dt);
-            last_gyr = angular_velocity;
-        } else if ((t - last_image_time) > 0.005)
-            break;
-        tmp_imu_buf.pop();
-    }
-    cout << "rel_Q.toRotationMatrix()" << endl << rel_Q.toRotationMatrix() << endl;
-    return rel_Q.toRotationMatrix();*/
 }
 
 void img_callback(const sensor_msgs::CompressedImageConstPtr &color_msg,
@@ -275,6 +210,9 @@ void process_tracker() {
         depth_msg = img_depth_buf.front().second;
         img_depth_buf.pop();
         lk_tracker.unlock();
+
+        Matrix3d tmp_relative_R = relative_R;
+        relative_R = Matrix3d::Identity();
 
         if (first_image_flag) {
             first_image_flag = false;
@@ -333,10 +271,9 @@ void process_tracker() {
         cv::Mat show_img = ptr->image;
         TicToc t_r;
         ROS_DEBUG("processing camera");
-        Matrix3d relative_R = Matrix3d::Identity();//integrateImuData();
         estimator.featureTracker.readImage(ptr->image.rowRange(0, ROW),
                                            color_msg->header.stamp.toSec(),
-                                           relative_R);
+                                           tmp_relative_R);
         //always 0
 #if SHOW_UNDISTORTION
         trackerData[i].showUndistortion("undistrotion_" + std::to_string(i));
@@ -413,11 +350,6 @@ void process_tracker() {
                 feature_buf.push(feature_points);
                 m_buf.unlock();
                 con.notify_one();
-            }
-            if (SHOW_TRACK) {
-                m_vis.lock();
-                vis_img_buf.emplace(color_msg);
-                m_vis.unlock();
             }
 
             // Show image with tracked points in rviz (by topic pub_match)
