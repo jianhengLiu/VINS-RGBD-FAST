@@ -79,7 +79,7 @@ void predict(const sensor_msgs::ImuConstPtr &imu_msg) {
 
     // Compute the relative rotation.
     Vector3d cam0_angle_axisd = cam0_mean_ang_vel * dt;
-    relative_R *= AngleAxisd(cam0_angle_axisd.norm(), cam0_angle_axisd.normalized()).toRotationMatrix();
+    relative_R *= AngleAxisd(cam0_angle_axisd.norm(), cam0_angle_axisd.normalized()).toRotationMatrix().transpose();
     // cl
 
     Eigen::Vector3d un_acc_1 = tmp_Q * (linear_acceleration - tmp_Ba) - estimator.g;
