@@ -13,6 +13,7 @@
 #include "BRIEF.h"
 #include "../DUtils/DUtils.h"
 #include <boost/dynamic_bitset.hpp>
+#include <opencv2/imgproc.hpp>
 #include <vector>
 
 using namespace std;
@@ -50,7 +51,7 @@ void BRIEF::compute(const cv::Mat &image,
     cv::Mat aux;
     if(image.depth() == 3)
     {
-      cv::cvtColor(image, aux, CV_RGB2GRAY);
+      cv::cvtColor(image, aux, cv::COLOR_RGB2GRAY);
     }
     else
     {

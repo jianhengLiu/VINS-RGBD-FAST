@@ -1,16 +1,16 @@
 # VINS-RGBD-FAST
 
-VINS-RGBD-FAST is a SLAM system based on VINS-RGBD. We do some refinements to accelerate the system's performance in resource-constrained embedded paltform, like HUAWEI Atlas 200DK.
+**VINS-RGBD-FAST** is a SLAM system based on VINS-RGBD. We do some refinements to accelerate the system's performance in resource-constrained embedded paltform, like [HUAWEI Atlas200 DK](https://e.huawei.com/en/products/cloud-computing-dc/atlas/atlas-200), [NVIDIA Jetson AGX Xavier](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-agx-xavier/).
 
 ## Refinements
-
+* grid-based feature detection
 * extract FAST feature instead of Harris feature
 * added stationary initialization
 * added IMU-aided feature tracking
 * added extracted-feature area's quality judgement
 * solved feature clusttering problem result frome FAST feature
 * use "sensor_msg::CompressedImage" as image topic type
-
+  
 ## RGBD-Inertial Trajectory Estimation and Mapping for Small Ground Rescue Robot
 
 Based one open source SLAM framework [VINS-Mono](https://github.com/HKUST-Aerial-Robotics/VINS-Mono).
@@ -72,3 +72,4 @@ Topics:
 
 ## 3. Licence
 The source code is released under [GPLv3](http://www.gnu.org/licenses/) license.
+

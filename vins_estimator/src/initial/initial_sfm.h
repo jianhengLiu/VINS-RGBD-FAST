@@ -1,3 +1,10 @@
+/*
+ * @Author: Jianheng Liu
+ * @Date: 2022-01-11 10:50:29
+ * @LastEditors: Jianheng Liu
+ * @LastEditTime: 2022-01-15 21:56:16
+ * @Description: Description
+ */
 #pragma once 
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
@@ -59,6 +66,9 @@ class GlobalSFM
 public:
 	GlobalSFM();
 	bool construct(int frame_num, Quaterniond* q, Vector3d* T, int l,
+			  const Matrix3d relative_R, const Vector3d relative_T,
+			  vector<SFMFeature> &sfm_f, map<int, Vector3d> &sfm_tracked_points);
+	bool constructWithDepth(int frame_num, Quaterniond* q, Vector3d* T, int l,
 			  const Matrix3d relative_R, const Vector3d relative_T,
 			  vector<SFMFeature> &sfm_f, map<int, Vector3d> &sfm_tracked_points);
 

@@ -230,16 +230,16 @@ void MarginalizationInfo::marginalize()
 
 
     TicToc t_thread_summing;
-    pthread_t tids[NUM_THREADS];
-    ThreadsStruct threadsstruct[NUM_THREADS];
+    pthread_t tids[NUM_MAR_THREADS];
+    ThreadsStruct threadsstruct[NUM_MAR_THREADS];
     int i = 0;
     for (auto it : factors)
     {
         threadsstruct[i].sub_factors.push_back(it);
         i++;
-        i = i % NUM_THREADS;
+        i = i % NUM_MAR_THREADS;
     }
-    for (int i = 0; i < NUM_THREADS; i++)
+    for (int i = 0; i < NUM_MAR_THREADS; i++)
     {
         TicToc zero_matrix;
         threadsstruct[i].A = Eigen::MatrixXd::Zero(pos,pos);
@@ -253,7 +253,7 @@ void MarginalizationInfo::marginalize()
             ROS_BREAK();
         }
     }
-    for( int i = NUM_THREADS - 1; i >= 0; i--)  
+    for( int i = NUM_MAR_THREADS - 1; i >= 0; i--)  
     {
         pthread_join( tids[i], NULL ); 
         A += threadsstruct[i].A;

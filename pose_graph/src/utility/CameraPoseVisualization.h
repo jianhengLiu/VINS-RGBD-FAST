@@ -7,7 +7,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <opencv2/opencv.hpp>
-#include "../parameters.h"
+#include "parameters.h"
 
 class CameraPoseVisualization {
 public:
@@ -34,9 +34,6 @@ private:
 	std_msgs::ColorRGBA m_optical_center_connector_color;
 	double m_scale;
 	double m_line_width;
-	visualization_msgs::Marker image;
-	int LOOP_EDGE_NUM;
-	int tmp_loop_edge_num;
 
 	static const Eigen::Vector3d imlt;
 	static const Eigen::Vector3d imlb;

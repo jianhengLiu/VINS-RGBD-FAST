@@ -5,7 +5,7 @@
 #include <Eigen/Dense>
 #include "../utility/utility.h"
 #include "../utility/tic_toc.h"
-#include "../parameters.h"
+#include "../utility/parameters.h"
 
 class ProjectionFactor : public ceres::SizedCostFunction<2, 7, 7, 7, 1>
 {

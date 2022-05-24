@@ -1,6 +1,8 @@
 **/build
 **/devel
 **/.idea
+**/.vscode
 **/cmake-build-debug
+**/.cache
 
-**/output/pose_graph/**
+!.gitignore
