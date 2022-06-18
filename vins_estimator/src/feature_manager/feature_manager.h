@@ -23,62 +23,62 @@ using namespace Eigen;
 
 struct DynamicObject
 {
-    int x_center;
-    int y_center;
-    int x_vel;
-    int y_vel;
-    int x_weight_vel;
-    int y_weight_vel;
-    int no_update_times;
+    int  x_center;
+    int  y_center;
+    int  x_vel;
+    int  y_vel;
+    int  x_weight_vel;
+    int  y_weight_vel;
+    int  no_update_times;
     bool is_update;
-    int x1;
-    int y1;
-    int x2;
-    int y2;
+    int  x1;
+    int  y1;
+    int  x2;
+    int  y2;
 };
 
 class FeaturePerFrame
 {
-  public:
+public:
     FeaturePerFrame(Eigen::Matrix<double, 7, 1> _point, double td, double _depth)
     {
-        point.x() = _point(0);
-        point.y() = _point(1);
-        point.z() = _point(2);
-        uv.x() = _point(3);
-        uv.y() = _point(4);
+        point.x()    = _point(0);
+        point.y()    = _point(1);
+        point.z()    = _point(2);
+        uv.x()       = _point(3);
+        uv.y()       = _point(4);
         velocity.x() = _point(5);
         velocity.y() = _point(6);
-        depth = _depth;
-        cur_td = td;
+        depth        = _depth;
+        cur_td       = td;
     }
 
-    double cur_td;
+    double   cur_td;
     Vector3d point;
     Vector2d uv;
     Vector2d velocity;
-    double z{};
-    bool is_used{};
+    double   z{};
+    bool     is_used{};
     MatrixXd A;
     VectorXd b;
-    double depth;
+    double   depth;
 };
 
 class FeaturePerId
 {
-  public:
-    const int feature_id;
-    int start_frame;
+public:
+    const int               feature_id;
+    int                     start_frame;
     vector<FeaturePerFrame> feature_per_frame;
 
-    int used_num;
-    bool is_dynamic,is_dynamic_mcc;
+    int    used_num;
+    bool   is_dynamic;
     double estimated_depth;
-    int estimate_flag; // 0 initial; 1 by depth image; 2 by triangulate
-    int solve_flag;    // 0 haven't solve yet; 1 solve succ; 2 solve fail;
+    int    estimate_flag;  // 0 initial; 1 by depth image; 2 by triangulate
+    int    solve_flag;     // 0 haven't solve yet; 1 solve succ; 2 solve fail;
 
     FeaturePerId(int _feature_id, int _start_frame)
-        : feature_id(_feature_id), start_frame(_start_frame), used_num(0), is_dynamic(false), is_dynamic_mcc(false),
+        : feature_id(_feature_id), start_frame(_start_frame), used_num(0), is_dynamic(false),
           estimated_depth(-1.0), estimate_flag(0), solve_flag(0)
     {
     }
@@ -88,7 +88,7 @@ class FeaturePerId
 
 class FeatureManager
 {
-  public:
+public:
     explicit FeatureManager(Matrix3d Rs[]);
 
     void setRic(Matrix3d _ric[]);
@@ -97,13 +97,15 @@ class FeatureManager
 
     int getFeatureCount();
 
-    bool addFeatureCheckParallax(int frame_count, map<int, Eigen::Matrix<double, 7, 1>> &image, double td);
+    bool addFeatureCheckParallax(int frame_count, map<int, Eigen::Matrix<double, 7, 1>> &image,
+                                 double td);
 
     void debugShow();
 
     vector<pair<Vector3d, Vector3d>> getCorresponding(int frame_count_l, int frame_count_r);
 
-    vector<pair<Vector3d, Vector3d>> getCorrespondingWithDepth(int frame_count_l, int frame_count_r);
+    vector<pair<Vector3d, Vector3d>> getCorrespondingWithDepth(int frame_count_l,
+                                                               int frame_count_r);
 
     // void updateDepth(const VectorXd &x);
     void setDepth(const VectorXd &x);
@@ -119,10 +121,11 @@ class FeatureManager
 
     void triangulateWithDepth(Vector3d Ps[], Vector3d _tic[], Matrix3d _ric[]);
 
-    void initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs[], Vector3d tic[], Matrix3d ric[]);
+    void initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs[], Vector3d tic[],
+                            Matrix3d ric[]);
 
-    bool solvePoseByPnP(Eigen::Matrix3d &R_initial, Eigen::Vector3d &P_initial, vector<cv::Point2f> &pts2D,
-                        vector<cv::Point3f> &pts3D);
+    bool solvePoseByPnP(Eigen::Matrix3d &R_initial, Eigen::Vector3d &P_initial,
+                        vector<cv::Point2f> &pts2D, vector<cv::Point3f> &pts3D);
 
     void removeBackShiftDepth(Eigen::Matrix3d marg_R, Eigen::Vector3d marg_P, Eigen::Matrix3d new_R,
                               Eigen::Vector3d new_P);
@@ -137,17 +140,17 @@ class FeatureManager
 
     void seedFilling(int x, int y, unsigned short last_depth, unsigned short _object_id);
 
-    list<FeaturePerId> feature; // cl:Lists将元素按顺序储存在链表中. 与 向量(vectors)相比,
-                                // 它允许快速的插入和删除，但是随机访问却比较慢.
+    list<FeaturePerId> feature;  // cl:Lists将元素按顺序储存在链表中. 与 向量(vectors)相比,
+                                 // 它允许快速的插入和删除，但是随机访问却比较慢.
     int last_track_num{};
 
     cv::Mat depth_img;
 
-  private:
+private:
     double compensatedParallax2(const FeaturePerId &it_per_id, int frame_count);
 
     const Matrix3d *Rs;
-    Matrix3d ric[NUM_OF_CAM];
+    Matrix3d        ric[NUM_OF_CAM];
 };
 
 #endif

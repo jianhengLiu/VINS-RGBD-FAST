@@ -10,8 +10,6 @@
         <remap from="/camera/aligned_depth_to_color/image_raw/compressedDepth" to="/not_used" />
     </node>
 
-    <node pkg="nodelet" type="nodelet" name="YoloAtlasNodelet" args="load yolo_ros/YoloAtlasNodelet $(arg manager_name)" output="screen"></node>
-
     <node pkg="nodelet" type="nodelet" name="EstimatorNodelet" args="load vins_estimator/EstimatorNodelet $(arg manager_name)" output="screen">
         <param name="config_file" type="string" value="$(arg config_path)" />
         <param name="vins_folder" type="string" value="$(arg vins_path)" />

@@ -1,10 +1,3 @@
-/*
- * @Author: Jianheng Liu
- * @Date: 2021-10-22 22:20:45
- * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-05-19 15:58:11
- * @Description: Description
- */
 #pragma once
 
 #include <csignal>

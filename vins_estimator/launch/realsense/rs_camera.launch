@@ -21,7 +21,7 @@
     <arg name="fisheye_height" default="-1" />
     <arg name="enable_fisheye" default="false" />
 
-    <arg name="depth_width" default="848" />
+    <arg name="depth_width" default="640" />
     <arg name="depth_height" default="480" />
     <arg name="enable_depth" default="true" />
 
@@ -30,14 +30,14 @@
     <arg name="enable_confidence" default="false" />
     <arg name="confidence_fps" default="-1" />
 
-    <arg name="infra_width" default="848" />
+    <arg name="infra_width" default="640" />
     <arg name="infra_height" default="480" />
     <arg name="enable_infra" default="false" />
     <arg name="enable_infra1" default="false" />
     <arg name="enable_infra2" default="false" />
     <arg name="infra_rgb" default="false" />
 
-    <arg name="color_width" default="848" />
+    <arg name="color_width" default="640" />
     <arg name="color_height" default="480" />
     <arg name="enable_color" default="true" />
 

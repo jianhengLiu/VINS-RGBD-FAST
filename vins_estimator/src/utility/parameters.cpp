@@ -52,7 +52,6 @@ std::vector<std::string> SEMANTIC_LABEL;
 std::vector<std::string> STATIC_LABEL;
 std::vector<std::string> DYNAMIC_LABEL;
 
-int EST_FRAME;
 int NUM_GRID_ROWS;
 int NUM_GRID_COLS;
 
@@ -121,8 +120,6 @@ void readParameters(ros::NodeHandle &n)
     DEPTH_MIN_DIST_MM = DEPTH_MIN_DIST * 1000;
     DEPTH_MAX_DIST_MM = DEPTH_MAX_DIST * 1000;
 
-    EST_FRAME = fsSettings["est_frame"];
-    ROS_INFO("EST_FRAME: %d", EST_FRAME);
     NUM_GRID_ROWS = fsSettings["num_grid_rows"];
     NUM_GRID_COLS = fsSettings["num_grid_cols"];
     ROS_INFO("NUM_GRID_ROWS: %d, NUM_GRID_COLS: %d", NUM_GRID_ROWS, NUM_GRID_COLS);
@@ -187,14 +184,14 @@ void readParameters(ros::NodeHandle &n)
         ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
         RIC.emplace_back(Eigen::Matrix3d::Identity());
         TIC.emplace_back(Eigen::Vector3d::Zero());
-        EX_CALIB_RESULT_PATH = OUTPUT_PATH + "/extrinsic_parameter.csv";
+        EX_CALIB_RESULT_PATH = OUTPUT_PATH + "/extrinsic_parameter.txt";
     }
     else
     {
         if (ESTIMATE_EXTRINSIC == 1)
         {
             ROS_WARN(" Optimize extrinsic param around initial guess!");
-            EX_CALIB_RESULT_PATH = OUTPUT_PATH + "/extrinsic_parameter.csv";
+            EX_CALIB_RESULT_PATH = OUTPUT_PATH + "/extrinsic_parameter.txt";
         }
         if (ESTIMATE_EXTRINSIC == 0)
             ROS_WARN(" fix extrinsic param ");

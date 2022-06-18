@@ -1,12 +1,3 @@
-
-
-/*
- * @Author: Jianheng Liu
- * @Date: 2021-12-15 15:55:14
- * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-05-24 15:03:42
- * @Description: Description
- */
 #pragma once
 
 #include "../estimator/estimator.h"
@@ -40,7 +31,7 @@ extern ros::Publisher pub_ref_pose, pub_cur_pose;
 extern ros::Publisher pub_key;
 extern nav_msgs::Path path;
 extern ros::Publisher pub_pose_graph;
-extern int IMAGE_ROW, IMAGE_COL;
+extern int            IMAGE_ROW, IMAGE_COL;
 
 void registerPub(ros::NodeHandle &n);
 
@@ -57,8 +48,7 @@ void printStatistics(const Estimator &estimator, double t);
 
 void pubOdometry(const Estimator &estimator, const std_msgs::Header &header);
 
-void pubInitialGuess(const Estimator &estimator,
-                     const std_msgs::Header &header);
+void pubInitialGuess(const Estimator &estimator, const std_msgs::Header &header);
 
 void pubKeyPoses(const Estimator &estimator, const std_msgs::Header &header);
 

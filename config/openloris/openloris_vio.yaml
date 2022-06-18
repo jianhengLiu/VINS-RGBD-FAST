@@ -17,7 +17,6 @@ output_path: "/home/nrosliu/DynamicVINS-Atlas/src/Dynamic_VINS/output"
 depth_min_dist: 0.3
 depth_max_dist: 3
 
-est_frame: 10
 frontend_freq: 30 # It should be raised in VO mode(without IMU).
 keyframe_parallax: 10.0 # keyframe selection threshold (pixel); if system fails frequently, please try to reduce the "keyframe_parallax"  
 num_grid_rows: 7

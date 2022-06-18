@@ -18,17 +18,17 @@
 #include "utility/tic_toc.h"
 #include "utility/visualization.h"
 
-#include <nodelet/nodelet.h> // 基类Nodelet所在的头文件
+#include <nodelet/nodelet.h>  // 基类Nodelet所在的头文件
 #include <pluginlib/class_list_macros.h>
 
 namespace estimator_nodelet_ns
 {
-class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继承Nodelet类。
+class EstimatorNodelet : public nodelet::Nodelet  //任何nodelet plugin都要继承Nodelet类。
 {
-  public:
+public:
     EstimatorNodelet() = default;
 
-  private:
+private:
     void onInit() override
     {
         ros::NodeHandle &pn = getPrivateNodeHandle();
@@ -50,47 +50,49 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
         sub_depth = nh.subscribe(DEPTH_TOPIC, 100, &EstimatorNodelet::depth_callback, this);
 
         if (USE_IMU)
-            sub_imu =
-                nh.subscribe(IMU_TOPIC, 100, &EstimatorNodelet::imu_callback, this, ros::TransportHints().tcpNoDelay());
+            sub_imu = nh.subscribe(IMU_TOPIC, 100, &EstimatorNodelet::imu_callback, this,
+                                   ros::TransportHints().tcpNoDelay());
         // topic from pose_graph, notify if there's relocalization
-        sub_relo_points =
-            nh.subscribe("/pose_graph/match_points", 10, &EstimatorNodelet::relocalization_callback, this);
+        sub_relo_points = nh.subscribe("/pose_graph/match_points", 10,
+                                       &EstimatorNodelet::relocalization_callback, this);
 
         dura = std::chrono::milliseconds(2);
 
-        trackThread = std::thread(&EstimatorNodelet::process_tracker, this);
+        trackThread   = std::thread(&EstimatorNodelet::process_tracker, this);
         processThread = std::thread(&EstimatorNodelet::process, this);
     }
 
     Estimator estimator;
 
     // thread relevance
-    std::thread trackThread, processThread;
+    std::thread               trackThread, processThread;
     std::chrono::milliseconds dura;
-    std::condition_variable con_tracker;
-    std::condition_variable con_estimator;
-    std::mutex m_feature;
-    std::mutex m_backend;
-    std::mutex m_buf;
-    std::mutex m_vis;
+    std::condition_variable   con_tracker;
+    std::condition_variable   con_estimator;
+    std::mutex                m_feature;
+    std::mutex                m_backend;
+    std::mutex                m_buf;
+    std::mutex                m_vis;
 
     // ROS and data buf relevance
-    ros::Subscriber sub_imu, sub_relo_points, sub_image, sub_depth;
+    ros::Subscriber                   sub_imu, sub_relo_points, sub_image, sub_depth;
     queue<sensor_msgs::ImageConstPtr> img_buf;
     queue<sensor_msgs::ImageConstPtr> depth_buf;
-    queue<pair<pair<std_msgs::Header, sensor_msgs::ImageConstPtr>, map<int, Eigen::Matrix<double, 7, 1>>>> feature_buf;
+    queue<pair<pair<std_msgs::Header, sensor_msgs::ImageConstPtr>,
+               map<int, Eigen::Matrix<double, 7, 1>>>>
+                                           feature_buf;
     queue<sensor_msgs::PointCloudConstPtr> relo_buf;
     queue<pair<std_msgs::Header, cv::Mat>> vis_img_buf;
 
     bool init_feature = false;
-    bool init_pub = false;
+    bool init_pub     = false;
 
     // frequency control relevance
-    bool first_image_flag = true;
+    bool   first_image_flag = true;
     double first_image_time = 0;
-    double last_image_time = 0;
-    int pub_count = 1;
-    int input_count = 0;
+    double last_image_time  = 0;
+    int    pub_count        = 1;
+    int    input_count      = 0;
 
     double last_imu_t = 0;
 
@@ -114,7 +116,8 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
             last_imu_t = imu_msg->header.stamp.toSec();
             Vector3d acc(imu_msg->linear_acceleration.x, imu_msg->linear_acceleration.y,
                          imu_msg->linear_acceleration.z);
-            Vector3d gyr(imu_msg->angular_velocity.x, imu_msg->angular_velocity.y, imu_msg->angular_velocity.z);
+            Vector3d gyr(imu_msg->angular_velocity.x, imu_msg->angular_velocity.y,
+                         imu_msg->angular_velocity.z);
             estimator.inputIMU(last_imu_t, acc, gyr);
         }
     }
@@ -142,7 +145,8 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
         m_buf.unlock();
     }
 
-    void visualizeFeatureFilter(const map<int, Eigen::Matrix<double, 7, 1>> &features, double feature_time)
+    void visualizeFeatureFilter(const map<int, Eigen::Matrix<double, 7, 1>> &features,
+                                double                                       feature_time)
     {
         cv::Mat vis_img;
         m_vis.lock();
@@ -169,7 +173,8 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
         // Show image with tracked points in rviz (by topic pub_match)
         for (auto &feature : features)
         {
-            cv::circle(vis_img, cv::Point(feature.second[3], feature.second[4]), 5, cv::Scalar(0, 255, 255), 2);
+            cv::circle(vis_img, cv::Point(feature.second[3], feature.second[4]), 5,
+                       cv::Scalar(0, 255, 255), 2);
         }
         pubTrackImg(vis_img);
 
@@ -201,12 +206,12 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                 double time_color = img_buf.front()->header.stamp.toSec();
                 double time_depth = depth_buf.front()->header.stamp.toSec();
 
-                if (time_color < time_depth - 0.005)
+                if (time_color < time_depth - 0.003)
                 {
                     img_buf.pop();
                     ROS_DEBUG("throw color\n");
                 }
-                else if (time_color > time_depth + 0.005)
+                else if (time_color > time_depth + 0.003)
                 {
                     depth_buf.pop();
                     ROS_DEBUG("throw depth\n");
@@ -230,7 +235,7 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                 {
                     first_image_flag = false;
                     first_image_time = time_color;
-                    last_image_time = time_color;
+                    last_image_time  = time_color;
                     continue;
                 }
 
@@ -239,8 +244,8 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                 {
                     ROS_WARN("image discontinue! reset the feature tracker!");
                     first_image_flag = true;
-                    last_image_time = 0;
-                    pub_count = 1;
+                    last_image_time  = 0;
+                    pub_count        = 1;
 
                     ROS_WARN("restart the estimator!");
                     m_feature.lock();
@@ -259,7 +264,8 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                 // frequency control
                 if (round(1.0 * input_count / (time_color - first_image_time)) > FRONTEND_FREQ)
                 {
-                    ROS_DEBUG("Skip this frame.%f", 1.0 * input_count / (time_color - first_image_time));
+                    ROS_DEBUG("Skip this frame.%f",
+                              1.0 * input_count / (time_color - first_image_time));
                     continue;
                 }
                 ++input_count;
@@ -272,8 +278,8 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                     if (abs(1.0 * pub_count / (time_color - first_image_time) - FREQ) < 0.01 * FREQ)
                     {
                         first_image_time = time_color;
-                        pub_count = 0;
-                        input_count = 0;
+                        pub_count        = 0;
+                        input_count      = 0;
                     }
                 }
                 else
@@ -284,17 +290,18 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                 // http://docs.ros.org/diamondback/api/sensor_msgs/html/image__encodings_8cpp_source.html
                 // color has encoding RGB8
                 cv_bridge::CvImageConstPtr ptr;
-                if (color_msg->encoding == "8UC1") // shan:why 8UC1 need this operation? Find
-                                                   // answer:https://github.com/ros-perception/vision_opencv/issues/175
+                if (color_msg->encoding ==
+                    "8UC1")  // shan:why 8UC1 need this operation? Find
+                             // answer:https://github.com/ros-perception/vision_opencv/issues/175
                 {
                     sensor_msgs::Image img;
-                    img.header = color_msg->header;
-                    img.height = color_msg->height;
-                    img.width = color_msg->width;
+                    img.header       = color_msg->header;
+                    img.height       = color_msg->height;
+                    img.width        = color_msg->width;
                     img.is_bigendian = color_msg->is_bigendian;
-                    img.step = color_msg->step;
-                    img.data = color_msg->data;
-                    img.encoding = "mono8";
+                    img.step         = color_msg->step;
+                    img.data         = color_msg->data;
+                    img.encoding     = "mono8";
                     ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8);
                 }
                 else
@@ -302,7 +309,8 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
 
                 if (USE_IMU)
                 {
-                    Matrix3d &&relative_R = estimator.predictMotion(last_image_time, time_color + estimator.td);
+                    Matrix3d &&relative_R =
+                        estimator.predictMotion(last_image_time, time_color + estimator.td);
                     estimator.featureTracker.readImage(ptr->image, time_color, relative_R);
                 }
                 else
@@ -325,26 +333,26 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                 {
                     pub_count++;
 
-                    std_msgs::Header feature_header = color_msg->header;
+                    std_msgs::Header                      feature_header = color_msg->header;
                     map<int, Eigen::Matrix<double, 7, 1>> image;
-                    auto &un_pts = estimator.featureTracker.cur_un_pts;
-                    auto &cur_pts = estimator.featureTracker.cur_pts;
-                    auto &ids = estimator.featureTracker.ids;
+                    auto &un_pts       = estimator.featureTracker.cur_un_pts;
+                    auto &cur_pts      = estimator.featureTracker.cur_pts;
+                    auto &ids          = estimator.featureTracker.ids;
                     auto &pts_velocity = estimator.featureTracker.pts_velocity;
                     for (unsigned int j = 0; j < ids.size(); j++)
                     {
                         if (estimator.featureTracker.track_cnt[j] > 1)
                         {
-                            int p_id = ids[j];
+                            int                    p_id = ids[j];
                             geometry_msgs::Point32 p;
-                            double x = un_pts[j].x;
-                            double y = un_pts[j].y;
-                            double z = 1;
+                            double                 x = un_pts[j].x;
+                            double                 y = un_pts[j].y;
+                            double                 z = 1;
 
-                            int v = p_id * NUM_OF_CAM + 0.5;
-                            int feature_id = v / NUM_OF_CAM;
-                            double p_u = cur_pts[j].x;
-                            double p_v = cur_pts[j].y;
+                            int    v          = p_id * NUM_OF_CAM + 0.5;
+                            int    feature_id = v / NUM_OF_CAM;
+                            double p_u        = cur_pts[j].x;
+                            double p_v        = cur_pts[j].y;
                             double velocity_x = pts_velocity[j].x;
                             double velocity_y = pts_velocity[j].y;
 
@@ -371,15 +379,16 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                         if (!image.empty())
                         {
                             m_feature.lock();
-                            feature_buf.push(make_pair(make_pair(feature_header, depth_msg), std::move(image)));
+                            feature_buf.push(
+                                make_pair(make_pair(feature_header, depth_msg), std::move(image)));
                             m_feature.unlock();
                             con_estimator.notify_one();
                         }
                         else
                         {
                             first_image_time = time_color;
-                            pub_count = 0;
-                            input_count = 0;
+                            pub_count        = 0;
+                            input_count      = 0;
                             continue;
                         }
                     }
@@ -390,14 +399,15 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                         cv::Mat show_img = ptr->image;
                         ptr = cv_bridge::cvtColor(ptr, sensor_msgs::image_encodings::BGR8);
                         cv::Mat stereo_img = ptr->image;
-                        cv::Mat tmp_img = stereo_img.rowRange(0, ROW);
+                        cv::Mat tmp_img    = stereo_img.rowRange(0, ROW);
                         cv::cvtColor(show_img, tmp_img, CV_GRAY2RGB);
 
                         for (unsigned int j = 0; j < estimator.featureTracker.cur_pts.size(); j++)
                         {
                             if (estimator.featureTracker.track_cnt[j] > 1)
                             {
-                                double len = std::min(1.0, 1.0 * estimator.featureTracker.track_cnt[j] / WINDOW_SIZE);
+                                double len = std::min(
+                                    1.0, 1.0 * estimator.featureTracker.track_cnt[j] / WINDOW_SIZE);
                                 cv::circle(tmp_img, estimator.featureTracker.cur_pts[j], 5,
                                            cv::Scalar(255 * (1 - len), 0, 255 * len), -1);
                                 // draw speed line
@@ -438,7 +448,7 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                     }
                 }
                 static double whole_process_time = 0;
-                static size_t cnt_frame = 0;
+                static size_t cnt_frame          = 0;
                 ++cnt_frame;
                 double per_process_time = t_r.toc();
                 whole_process_time += per_process_time;
@@ -460,8 +470,9 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                 con_estimator.wait(locker);
             }
 
-            pair<pair<std_msgs::Header, sensor_msgs::ImageConstPtr>, map<int, Eigen::Matrix<double, 7, 1>>> feature_msg(
-                std::move(feature_buf.front()));
+            pair<pair<std_msgs::Header, sensor_msgs::ImageConstPtr>,
+                 map<int, Eigen::Matrix<double, 7, 1>>>
+                feature_msg(std::move(feature_buf.front()));
             feature_buf.pop();
             locker.unlock();
 
@@ -478,7 +489,7 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
             if (relo_msg != nullptr)
             {
                 vector<Vector3d> match_points;
-                double frame_stamp = relo_msg->header.stamp.toSec();
+                double           frame_stamp = relo_msg->header.stamp.toSec();
                 for (auto point : relo_msg->points)
                 {
                     Vector3d u_v_id;
@@ -487,19 +498,21 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
                     u_v_id.z() = point.z;
                     match_points.push_back(u_v_id);
                 }
-                Vector3d relo_t(relo_msg->channels[0].values[0], relo_msg->channels[0].values[1],
-                                relo_msg->channels[0].values[2]);
+                Vector3d    relo_t(relo_msg->channels[0].values[0], relo_msg->channels[0].values[1],
+                                   relo_msg->channels[0].values[2]);
                 Quaterniond relo_q(relo_msg->channels[0].values[3], relo_msg->channels[0].values[4],
-                                   relo_msg->channels[0].values[5], relo_msg->channels[0].values[6]);
-                Matrix3d relo_r = relo_q.toRotationMatrix();
-                int frame_index;
+                                   relo_msg->channels[0].values[5],
+                                   relo_msg->channels[0].values[6]);
+                Matrix3d    relo_r = relo_q.toRotationMatrix();
+                int         frame_index;
                 frame_index = relo_msg->channels[0].values[7];
                 estimator.setReloFrame(frame_stamp, frame_index, match_points, relo_t, relo_r);
             }
 
             // depth has encoding TYPE_16UC1
             cv::Mat depth_img;
-            if (feature_msg.first.second->encoding == "mono16" || feature_msg.first.second->encoding == "16UC1")
+            if (feature_msg.first.second->encoding == "mono16" ||
+                feature_msg.first.second->encoding == "16UC1")
             {
                 depth_img = cv_bridge::toCvShare(feature_msg.first.second)->image;
             }
@@ -520,11 +533,8 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
             estimator.processImage(feature_msg.second, feature_msg.first.first);
 
             std_msgs::Header header = feature_msg.first.first;
-            header.frame_id = "map";
+            header.frame_id         = "map";
             pubOdometry(estimator, header);
-            pubKeyPoses(estimator, header);
-            pubCameraPose(estimator, header);
-            pubPointCloud(estimator, header);
             pubTF(estimator, header);
             pubKeyframe(estimator);
             if (relo_msg != nullptr)
@@ -533,12 +543,15 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
             m_backend.unlock();
             if (SHOW_TRACK)
             {
+                pubKeyPoses(estimator, header);
+                pubCameraPose(estimator, header);
+                pubPointCloud(estimator, header);
                 visualizeFeatureFilter(feature_msg.second, feature_time);
             }
 
-            static int cnt_frame = 0;
+            static int    cnt_frame          = 0;
             static double whole_process_time = 0;
-            double per_process_time = t_backend.toc();
+            double        per_process_time   = t_backend.toc();
             cnt_frame++;
             whole_process_time += per_process_time;
             printStatistics(estimator, per_process_time);
@@ -550,4 +563,4 @@ class EstimatorNodelet : public nodelet::Nodelet //任何nodelet plugin都要继
 };
 
 PLUGINLIB_EXPORT_CLASS(estimator_nodelet_ns::EstimatorNodelet, nodelet::Nodelet)
-} // namespace estimator_nodelet_ns
+}  // namespace estimator_nodelet_ns

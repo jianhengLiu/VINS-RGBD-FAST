@@ -18,7 +18,6 @@ depth_min_dist: 0.3
 depth_max_dist: 10
 fix_depth: 0
 
-est_frame: 10
 frontend_freq: 30 # It should be raised in VO mode(without IMU).
 keyframe_parallax: 10.0 # keyframe selection threshold (pixel); if system fails frequently, please try to reduce the "keyframe_parallax"  
 num_grid_rows: 7

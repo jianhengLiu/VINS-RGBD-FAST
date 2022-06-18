@@ -27,7 +27,7 @@ void reduceVector(vector<int> &v, vector<uchar> status)
 FeatureTracker::FeatureTracker()
 {
     p_fast_feature_detector = cv::FastFeatureDetector::create();
-    n_id = 0;
+    n_id                    = 0;
 }
 
 void FeatureTracker::initGridsDetector()
@@ -36,10 +36,10 @@ void FeatureTracker::initGridsDetector()
 
     grids_detector_img = cv::Mat(ROW, COL, CV_8UC1, cv::Scalar(0));
 
-    grid_height = (int)(ROW / NUM_GRID_ROWS);
-    grid_width = (int)(COL / NUM_GRID_COLS);
+    grid_height     = (int)(ROW / NUM_GRID_ROWS);
+    grid_width      = (int)(COL / NUM_GRID_COLS);
     grid_res_height = ROW - (NUM_GRID_ROWS - 1) * grid_height;
-    grid_res_width = COL - (NUM_GRID_COLS - 1) * grid_width;
+    grid_res_width  = COL - (NUM_GRID_COLS - 1) * grid_width;
 
     if (grids_rect.empty())
     {
@@ -61,19 +61,23 @@ void FeatureTracker::initGridsDetector()
                     if (j == 0)
                         rect = cv::Rect(0, i * grid_height - 3, grid_width + 3, grid_height + 6);
                     else if (j > 0 && j < NUM_GRID_COLS - 1)
-                        rect = cv::Rect(j * grid_width - 3, i * grid_height - 3, grid_width + 6, grid_height + 6);
+                        rect = cv::Rect(j * grid_width - 3, i * grid_height - 3, grid_width + 6,
+                                        grid_height + 6);
                     else
-                        rect = cv::Rect(j * grid_width - 3, i * grid_height - 3, grid_res_width + 3, grid_height + 6);
+                        rect = cv::Rect(j * grid_width - 3, i * grid_height - 3, grid_res_width + 3,
+                                        grid_height + 6);
                 }
                 else
                 {
                     if (j == 0)
-                        rect = cv::Rect(0, i * grid_height - 3, grid_width + 3, grid_res_height + 3);
-                    else if (j > 0 && j < NUM_GRID_COLS - 1)
-                        rect = cv::Rect(j * grid_width - 3, i * grid_height - 3, grid_width + 6, grid_res_height + 3);
-                    else
                         rect =
-                            cv::Rect(j * grid_width - 3, i * grid_height - 3, grid_res_width + 3, grid_res_height + 3);
+                            cv::Rect(0, i * grid_height - 3, grid_width + 3, grid_res_height + 3);
+                    else if (j > 0 && j < NUM_GRID_COLS - 1)
+                        rect = cv::Rect(j * grid_width - 3, i * grid_height - 3, grid_width + 6,
+                                        grid_res_height + 3);
+                    else
+                        rect = cv::Rect(j * grid_width - 3, i * grid_height - 3, grid_res_width + 3,
+                                        grid_res_height + 3);
                     // if (j < NUM_GRID_COLS - 1)
                     //   rect = cv::Rect(j * grid_width, i * grid_height, grid_width,
                     //                   grid_res_height);
@@ -98,22 +102,25 @@ void FeatureTracker::initGridsDetector()
 bool FeatureTracker::inBorder(const cv::Point2f &pt)
 {
     const int BORDER_SIZE = 1;
-    int img_x = cvRound(pt.x);
-    int img_y = cvRound(pt.y);
-    return BORDER_SIZE <= img_x && img_x < COL - BORDER_SIZE && BORDER_SIZE <= img_y && img_y < ROW - BORDER_SIZE;
+    int       img_x       = cvRound(pt.x);
+    int       img_y       = cvRound(pt.y);
+    return BORDER_SIZE <= img_x && img_x < COL - BORDER_SIZE && BORDER_SIZE <= img_y &&
+           img_y < ROW - BORDER_SIZE;
 }
 
 std::vector<cv::KeyPoint> FeatureTracker::gridDetect(size_t grid_id)
 {
     // TicToc t_temp_ceil_fast;
     std::vector<cv::KeyPoint> temp_keypts;
-    p_fast_feature_detector->detect(forw_img(grids_rect[grid_id]), temp_keypts, mask(grids_rect[grid_id]));
+    p_fast_feature_detector->detect(forw_img(grids_rect[grid_id]), temp_keypts,
+                                    mask(grids_rect[grid_id]));
 
     if (SHOW_TRACK)
     {
         forw_img(grids_rect[grid_id]).copyTo(grids_detector_img(grids_rect[grid_id]));
-        cv::drawKeypoints(grids_detector_img(grids_rect[grid_id]), temp_keypts, grids_detector_img(grids_rect[grid_id]),
-                          cv::Scalar::all(255), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+        cv::drawKeypoints(grids_detector_img(grids_rect[grid_id]), temp_keypts,
+                          grids_detector_img(grids_rect[grid_id]), cv::Scalar::all(255),
+                          cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
     }
 
     if (temp_keypts.empty())
@@ -134,7 +141,7 @@ std::vector<cv::KeyPoint> FeatureTracker::gridDetect(size_t grid_id)
             return temp_keypts;
         }
         std::vector<cv::KeyPoint> keypts_to_add(grid_num_to_add);
-        int min_response_id = 0;
+        int                       min_response_id = 0;
         for (size_t j = 0; j < temp_keypts.size(); ++j)
         {
             if (grid_num_to_add > 0)
@@ -183,9 +190,8 @@ void FeatureTracker::setMask()
         cnt_pts_id.emplace_back(track_cnt[i], make_pair(forw_pts[i], ids[i]));
 
     sort(cnt_pts_id.begin(), cnt_pts_id.end(),
-         [](const pair<int, pair<cv::Point2f, int>> &a, const pair<int, pair<cv::Point2f, int>> &b) {
-             return a.first > b.first;
-         });
+         [](const pair<int, pair<cv::Point2f, int>> &a, const pair<int, pair<cv::Point2f, int>> &b)
+         { return a.first > b.first; });
 
     forw_pts.clear();
     ids.clear();
@@ -250,7 +256,7 @@ void FeatureTracker::addPoints(int n_max_cnt, vector<cv::KeyPoint> &Keypts)
             forw_pts.push_back(Keypt.pt);
             ids.push_back(-1);
             track_cnt.push_back(1);
-            cv::circle(mask, Keypt.pt, MIN_DIST, 0, -1); // cl: prevent close feature selected
+            cv::circle(mask, Keypt.pt, MIN_DIST, 0, -1);  // cl: prevent close feature selected
             n_add++;
             if (n_add == n_max_cnt)
             {
@@ -263,13 +269,13 @@ void FeatureTracker::addPoints(int n_max_cnt, vector<cv::KeyPoint> &Keypts)
 void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, const Matrix3d &_relative_R)
 {
     cv::Mat img;
-    TicToc t_r;
+    TicToc  t_r;
     cur_time = _cur_time;
     // too dark or too bright: histogram
     if (EQUALIZE)
     {
         cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
-        TicToc t_c;
+        TicToc             t_c;
         clahe->apply(_img, img);
         ROS_DEBUG("CLAHE costs: %fms", t_c.toc());
     }
@@ -291,7 +297,7 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, const Matr
 
     if (!cur_pts.empty())
     {
-        TicToc t_o;
+        TicToc        t_o;
         vector<uchar> status;
         vector<float> err;
 
@@ -299,13 +305,15 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, const Matr
         {
             predictPtsInNextFrame(_relative_R);
             forw_pts = predict_pts;
-            cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 1,
-                                     cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
-                                     cv::OPTFLOW_USE_INITIAL_FLOW);
+            cv::calcOpticalFlowPyrLK(
+                cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 1,
+                cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
+                cv::OPTFLOW_USE_INITIAL_FLOW);
         }
         else
         {
-            cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3);
+            cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err,
+                                     cv::Size(21, 21), 3);
         }
 
         for (int i = 0; i < int(forw_pts.size()); i++)
@@ -329,7 +337,7 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, const Matr
         // ROS_DEBUG("temporal optical flow costs: %fms", t_o.toc());
         //  光流准确率，时间输出
         static double OpticalFlow_time = 0;
-        static int of_cnt_frame = 0;
+        static int    of_cnt_frame     = 0;
         OpticalFlow_time += t_o.toc();
         of_cnt_frame++;
         ROS_DEBUG("average optical flow costs: %fms\n", OpticalFlow_time / (double)of_cnt_frame);
@@ -355,7 +363,7 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, const Matr
         // ROS_DEBUG("set mask costs %fms", t_m.toc());
 
         TicToc t_t;
-        int n_max_cnt = MAX_CNT - static_cast<int>(forw_pts.size());
+        int    n_max_cnt = MAX_CNT - static_cast<int>(forw_pts.size());
         if (n_max_cnt > 0)
         {
             if (mask.empty())
@@ -366,46 +374,44 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, const Matr
             // TicToc t_grid_detect;
 
             for (auto &grid_track_num : grids_track_num)
-              grid_track_num = 0;
+                grid_track_num = 0;
 
             for (auto &forw_pt : forw_pts)
             {
-              int col_id = (int)forw_pt.x / grid_width;
-              int row_id = (int)forw_pt.y / grid_height;
-              if (col_id == NUM_GRID_COLS)
-                --col_id;
-              if (row_id == NUM_GRID_ROWS)
-                --row_id;
-              ++grids_track_num[col_id + NUM_GRID_COLS * row_id];
+                int col_id = (int)forw_pt.x / grid_width;
+                int row_id = (int)forw_pt.y / grid_height;
+                if (col_id == NUM_GRID_COLS)
+                    --col_id;
+                if (row_id == NUM_GRID_ROWS)
+                    --row_id;
+                ++grids_track_num[col_id + NUM_GRID_COLS * row_id];
             }
 
             std::vector<int> grids_id;
             for (size_t i = 0; i < grids_rect.size(); ++i)
             {
-              if (grids_track_num[i] < grids_threshold && grids_texture_status[i])
-              {
-                grids_id.emplace_back(i);
-              }
-              else
-              {
-                grids_texture_status[i] = true;
-              }
+                if (grids_track_num[i] < grids_threshold && grids_texture_status[i])
+                {
+                    grids_id.emplace_back(i);
+                }
+                else
+                {
+                    grids_texture_status[i] = true;
+                }
             }
 
             std::vector<std::future<std::vector<cv::KeyPoint>>> grids_keypts;
             for (int &i : grids_id)
             {
-              grids_keypts.emplace_back(pool->enqueue(
-                  [this](int grid_id)
-                  { return gridDetect(grid_id); },
-                  i));
+                grids_keypts.emplace_back(
+                    pool->enqueue([this](int grid_id) { return gridDetect(grid_id); }, i));
             }
 
             // TicToc t_a;
             for (auto &&grid_keypts_asyn : grids_keypts)
             {
-              std::vector<cv::KeyPoint> &&grid_keypts = grid_keypts_asyn.get();
-              addPoints(grid_keypts);
+                std::vector<cv::KeyPoint> &&grid_keypts = grid_keypts_asyn.get();
+                addPoints(grid_keypts);
             }
             // std::vector<cv::KeyPoint> Keypts;
             // p_fast_feature_detector->detect(forw_img, Keypts, mask);
@@ -421,16 +427,16 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time, const Matr
                     grid_detect_fast_time / (double)cnt_grid_frame); */
         }
 
-        static double detect_time = 0;
-        static int detect_cnt_frame = 0;
+        static double detect_time      = 0;
+        static int    detect_cnt_frame = 0;
         detect_time += t_t.toc();
         detect_cnt_frame++;
         ROS_DEBUG("average detect costs: %fms\n", detect_time / (double)detect_cnt_frame);
         // ROS_DEBUG("detect feature costs: %fms", t_t.toc());
     }
     prev_un_pts = cur_un_pts;
-    cur_img = forw_img;
-    cur_pts = forw_pts;
+    cur_img     = forw_img;
+    cur_pts     = forw_pts;
 
     //  去畸变，投影至归一化平面，计算特征点速度(pixel/s)
     undistortedPoints();
@@ -442,19 +448,19 @@ void FeatureTracker::rejectWithF()
 {
     if (forw_pts.size() >= 8)
     {
-        TicToc t_f;
+        TicToc              t_f;
         vector<cv::Point2f> un_cur_pts(cur_pts.size()), un_forw_pts(forw_pts.size());
         for (unsigned int i = 0; i < cur_pts.size(); i++)
         {
             Eigen::Vector3d tmp_p;
             m_camera->liftProjective(Eigen::Vector2d(cur_pts[i].x, cur_pts[i].y), tmp_p);
-            tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
-            tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
+            tmp_p.x()     = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
+            tmp_p.y()     = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
             un_cur_pts[i] = cv::Point2f(tmp_p.x(), tmp_p.y());
 
             m_camera->liftProjective(Eigen::Vector2d(forw_pts[i].x, forw_pts[i].y), tmp_p);
-            tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
-            tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
+            tmp_p.x()      = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
+            tmp_p.y()      = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
             un_forw_pts[i] = cv::Point2f(tmp_p.x(), tmp_p.y());
         }
 
@@ -466,7 +472,8 @@ void FeatureTracker::rejectWithF()
         reduceVector(cur_un_pts, status);
         reduceVector(ids, status);
         reduceVector(track_cnt, status);
-        ROS_DEBUG("FM ransac: %d -> %lu: %f", size_a, forw_pts.size(), 1.0 * forw_pts.size() / size_a);
+        ROS_DEBUG("FM ransac: %d -> %lu: %f", size_a, forw_pts.size(),
+                  1.0 * forw_pts.size() / size_a);
         ROS_DEBUG("FM ransac costs: %fms", t_f.toc());
     }
 }
@@ -475,7 +482,8 @@ Eigen::Vector3d FeatureTracker::get3dPt(const cv::Mat &depth, const cv::Point2f 
 {
     Eigen::Vector3d tmp_P;
     m_camera->liftProjective(Eigen::Vector2d(pt.x, pt.y), tmp_P);
-    Eigen::Vector3d P = tmp_P.normalized() * (((int)depth.at<unsigned short>(round(pt.y), round(pt.x))) / 1000.0);
+    Eigen::Vector3d P =
+        tmp_P.normalized() * (((int)depth.at<unsigned short>(round(pt.y), round(pt.x))) / 1000.0);
 
     return P;
 }
@@ -500,7 +508,7 @@ void FeatureTracker::readIntrinsicParameter(const string &calib_file)
 
 void FeatureTracker::showUndistortion(const string &name)
 {
-    cv::Mat undistortedImg(ROW + 600, COL + 600, CV_8UC1, cv::Scalar(0));
+    cv::Mat                 undistortedImg(ROW + 600, COL + 600, CV_8UC1, cv::Scalar(0));
     vector<Eigen::Vector2d> distortedp, undistortedp;
     for (int i = 0; i < COL; i++)
         for (int j = 0; j < ROW; j++)
@@ -521,8 +529,8 @@ void FeatureTracker::showUndistortion(const string &name)
         // cout << trackerData[0].K << endl;
         // printf("%lf %lf\n", p.at<float>(1, 0), p.at<float>(0, 0));
         // printf("%lf %lf\n", pp.at<float>(1, 0), pp.at<float>(0, 0));
-        if (pp.at<float>(1, 0) + 300 >= 0 && pp.at<float>(1, 0) + 300 < ROW + 600 && pp.at<float>(0, 0) + 300 >= 0 &&
-            pp.at<float>(0, 0) + 300 < COL + 600)
+        if (pp.at<float>(1, 0) + 300 >= 0 && pp.at<float>(1, 0) + 300 < ROW + 600 &&
+            pp.at<float>(0, 0) + 300 >= 0 && pp.at<float>(0, 0) + 300 < COL + 600)
         {
             undistortedImg.at<uchar>(pp.at<float>(1, 0) + 300, pp.at<float>(0, 0) + 300) =
                 cur_img.at<uchar>(distortedp[i].y(), distortedp[i].x());
