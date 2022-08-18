@@ -198,33 +198,6 @@ void Estimator::processImage(map<int, Eigen::Matrix<double, 7, 1>> &image,
             processIMU(dt, imu_vector[i].second.first, imu_vector[i].second.second);
         }
         prevTime = curTime;
-
-        if (solver_flag == NON_LINEAR)
-        {
-            TicToc   mcc_time;
-            set<int> removeIndex;
-            movingConsistencyCheck(removeIndex);
-
-            static double whole_mcc_time = 0;
-            static size_t cnt_frame      = 0;
-            ++cnt_frame;
-            whole_mcc_time += mcc_time.toc();
-            ROS_DEBUG("average mcc costs: %f", whole_mcc_time / cnt_frame);
-            if (SHOW_TRACK)
-            {
-                for (auto iter = image.begin(), iter_next = image.begin(); iter != image.end();
-                     iter = iter_next)
-                {
-                    ++iter_next;
-                    auto it = removeIndex.find(iter->first);
-
-                    if (it != removeIndex.end())
-                    {
-                        image.erase(iter);
-                    }
-                }
-            }
-        }
     }
 
     ImageFrame imageframe(image, header.stamp.toSec());
@@ -348,22 +321,19 @@ void Estimator::processImage(map<int, Eigen::Matrix<double, 7, 1>> &image,
         optimization();
         ROS_DEBUG("solver costs: %fms", t_solve.toc());
 
-        if (!USE_IMU)
+        set<int> removeIndex;
+        movingConsistencyCheck(removeIndex);
+        if (SHOW_TRACK)
         {
-            set<int> removeIndex;
-            movingConsistencyCheck(removeIndex);
-            if (SHOW_TRACK)
+            for (auto iter = image.begin(), iter_next = image.begin(); iter != image.end();
+                 iter = iter_next)
             {
-                for (auto iter = image.begin(), iter_next = image.begin(); iter != image.end();
-                     iter = iter_next)
-                {
-                    ++iter_next;
-                    auto it = removeIndex.find(iter->first);
+                ++iter_next;
+                auto it = removeIndex.find(iter->first);
 
-                    if (it != removeIndex.end())
-                    {
-                        image.erase(iter);
-                    }
+                if (it != removeIndex.end())
+                {
+                    image.erase(iter);
                 }
             }
         }
@@ -1368,7 +1338,7 @@ void Estimator::optimization()
         problem.SetParameterBlockConstant(para_Pose[0]);
     }
     /*######优化参数：imu与camera外参#######*/
-    for (auto & i : para_Ex_Pose)
+    for (auto &i : para_Ex_Pose)
     {
         ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
         problem.AddParameterBlock(i, SIZE_POSE, local_parameterization);
@@ -2175,17 +2145,8 @@ void Estimator::movingConsistencyCheck(set<int> &removeIndex)
         }
         if (errCnt > 0)
         {
-            double threshold;
-            if (USE_IMU)
-            {
-                threshold = 30;
-            }
-            else if (it_per_id.estimate_flag == 1)
-                threshold = 3;
-            else
-                threshold = 10;
             double ave_err = err / errCnt;
-            if (ave_err * FOCAL_LENGTH > threshold)
+            if (ave_err * FOCAL_LENGTH > 10)
             {
                 removeIndex.insert(it_per_id.feature_id);
                 it_per_id.is_dynamic = true;

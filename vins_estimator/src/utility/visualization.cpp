@@ -63,11 +63,6 @@ void registerPub(ros::NodeHandle &n)
     keyframebasevisual.setLineWidth(0.01);
 }
 
-// void pubLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q,
-//                        const Eigen::Vector3d &V,
-//                       //  const Eigen::Vector3d &A,
-//                       //  const Eigen::Vector3d &omega,
-//                        const std_msgs::Header &header)
 void pubLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q,
                        const Eigen::Vector3d &V, const double &t)
 {
@@ -92,6 +87,11 @@ void pubLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q,
     // odometry.twist.twist.angular.z = a_center.z();
 
     pub_latest_odometry.publish(odometry);
+
+    geometry_msgs::PoseStamped pose;
+    pose.header = odometry.header;
+    pose.pose   = odometry.pose.pose;
+    pub_imu_pose.publish(pose);
 }
 
 void printStatistics(const Estimator &estimator, double t)
@@ -187,7 +187,6 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
         path.header                  = header;
         path.header.frame_id         = "map";
         path.poses.push_back(pose_stamped);
-        pub_imu_pose.publish(pose_stamped);
         //"path"
         pub_path.publish(path);
 

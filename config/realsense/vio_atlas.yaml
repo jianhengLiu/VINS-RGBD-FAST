@@ -14,8 +14,8 @@ depth_topic: "/camera/aligned_depth_to_color/image_raw"
 output_path: "/home/nrosliu/DynamicVINS-Atlas/src/Dynamic_VINS/output"
 
 #RGBD camera Ideal Range
-depth_min_dist: 0.6
-depth_max_dist: 8
+depth_min_dist: 0.3
+depth_max_dist: 6
 fix_depth: 1    # 1: feature in ideal range will be set as constant 
 
 frontend_freq: 20 # It should be raised in VO mode(without IMU).
@@ -29,15 +29,15 @@ image_width: 640
 image_height: 480
 
 distortion_parameters:
-   k1: -0.04936948662284771
-   k2: 0.033415696560328244
-   p1: -3.1102285057757626e-05
-   p2: -0.0003755759561384779
+   k1: 0.0
+   k2: 0.0
+   p1: 0.0
+   p2: 0.0
 projection_parameters:
-   fx: 380.9915802505342
-   fy: 380.5726314074475
-   cx: 322.1283748720177
-   cy: 243.44425225854206
+   fx: 607.6510009765625
+   fy: 607.8088989257812
+   cx: 321.4718933105469
+   cy: 233.74542236328125
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -45,34 +45,21 @@ estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trus
                         # 2  Don't know anything about extrinsic parameters. You don't need to give R,T. We will try to calibrate it. Do some rotation movement at beginning.
 #If you choose 0 or 1, you should write down the following matrix.
 #Rotation from camera frame to imu frame, imu^R_cam
-# extrinsicRotation: !!opencv-matrix
-#    rows: 3
-#    cols: 3
-#    dt: d
-#    data: [ 2.1156715985850560e-03, 3.4380773593936820e-02,
-#        9.9940656708907483e-01, -9.9891090466041299e-01,
-#        -4.6510279139396538e-02, 3.7146311917905517e-03,
-#        4.6610390303048810e-02, -9.9832597699421699e-01,
-#        3.4244929177026595e-02 ]
-# extrinsicTranslation: !!opencv-matrix
-#    rows: 3
-#    cols: 1
-#    dt: d
-#    data: [ 9.4817483500610950e-02, -1.0465556910371377e-03,
-#        -1.4399631979047147e-02 ]
 extrinsicRotation: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [ 0.00170764,  0.01852196,  0.999827,
-           -0.99937004, -0.03541091,  0.00236286,
-           0.03544855, -0.99920118,  0.01844982]
-#Translation from camera frame to imu frame, imu^T_cam
+   data: [ 9.3342769984783303e-03, 7.0915647472120646e-03,
+       9.9993128813051546e-01, -9.9989532801979553e-01,
+       1.1121001416579235e-02, 9.2550705928242660e-03,
+       -1.1054604339432283e-02, -9.9991301273507216e-01,
+       7.1946289668098906e-03 ]
 extrinsicTranslation: !!opencv-matrix
    rows: 3
    cols: 1
    dt: d
-   data: [0.1133018, -0.00904766, -0.01681839]
+   data: [ 1.5294063455597998e-01, 2.3548431453085356e-02,
+       -1.1530213212167922e-01 ]
 
 
 #feature traker paprameters
@@ -99,11 +86,11 @@ g_norm: 9.805       # gravity magnitude
 
 #unsynchronization parameters
 estimate_td: 1    ##########                  # online estimate time offset between camera and imu
-td: -0.0229402219449                           # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
+td: 0.0                           # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 
 #rolling shutter parameters
-rolling_shutter: 0                      # 0: global shutter camera, 1: rolling shutter camera
-rolling_shutter_tr: 0.0               # unit: s. rolling shutter read out time per frame (from data sheet).
+rolling_shutter: 1                      # 0: global shutter camera, 1: rolling shutter camera
+rolling_shutter_tr: 0.033               # unit: s. rolling shutter read out time per frame (from data sheet).
 
 #loop closure parameters
 loop_closure: 0                    # start loop closure

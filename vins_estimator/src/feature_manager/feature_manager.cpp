@@ -73,7 +73,6 @@ bool FeatureManager::addFeatureCheckParallax(int                                
 
         double pt_depth_m = pt_depth_mm / 1000.0;
 
-        // TODO： judge if it is neccessary
         if (0 < pt_depth_m && pt_depth_m < DEPTH_MIN_DIST)
         {
             image.erase(iter);
@@ -397,8 +396,6 @@ void FeatureManager::triangulateWithDepth(Vector3d _Ps[], Vector3d _tic[], Matri
         it_per_id.used_num = it_per_id.feature_per_frame.size();
         if (!(it_per_id.used_num >= 2 && it_per_id.start_frame < WINDOW_SIZE - 2))
             continue;
-        // if (it_per_id.used_num < 4)
-        //     continue;
 
         int imu_i = it_per_id.start_frame;
 

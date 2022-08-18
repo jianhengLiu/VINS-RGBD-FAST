@@ -11,6 +11,7 @@
     </node>
 
     <node pkg="nodelet" type="nodelet" name="EstimatorNodelet" args="load vins_estimator/EstimatorNodelet $(arg manager_name)" output="screen">
+        <remap from="/vins_estimator/imu_pose" to="/mavros/vision_pose/pose" />
         <param name="config_file" type="string" value="$(arg config_path)" />
         <param name="vins_folder" type="string" value="$(arg vins_path)" />
     </node>

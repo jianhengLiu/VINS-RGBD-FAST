@@ -6,8 +6,13 @@
     <node pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager" output="screen" />
 
     <node pkg="nodelet" type="nodelet" name="EstimatorNodelet" args="load vins_estimator/EstimatorNodelet $(arg manager_name)" output="screen">
+        <!-- <remap from="/vins_estimator/imu_pose" to="/mavros/vision_pose/pose" /> -->
         <param name="config_file" type="string" value="$(arg config_path)" />
         <param name="vins_folder" type="string" value="$(arg vins_path)" />
+    </node>
+
+    <node pkg="tag_aided_loc" type="tag_aided_loc_node" name="tag_aided_loc_node" output="screen">
+        <remap from="/pose" to="/mavros/vision_pose/pose" />
     </node>
 
     <!-- <node pkg="nodelet" type="nodelet" name="PoseGraphNodelet" args="load pose_graph/PoseGraphNodelet $(arg manager_name)" output="screen">

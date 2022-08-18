@@ -1,6 +1,7 @@
 #include "utility.h"
 
 // https://blog.csdn.net/huanghaihui_123/article/details/103075107#commentBox
+// R_W_I
 Eigen::Matrix3d Utility::g2R(const Eigen::Vector3d &g)
 {
     Eigen::Matrix3d R0;

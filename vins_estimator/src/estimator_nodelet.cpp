@@ -46,11 +46,11 @@ private:
 
         registerPub(nh);
 
-        sub_image = nh.subscribe(IMAGE_TOPIC, 100, &EstimatorNodelet::image_callback, this);
-        sub_depth = nh.subscribe(DEPTH_TOPIC, 100, &EstimatorNodelet::depth_callback, this);
+        sub_image = nh.subscribe(IMAGE_TOPIC, 1000, &EstimatorNodelet::image_callback, this);
+        sub_depth = nh.subscribe(DEPTH_TOPIC, 1000, &EstimatorNodelet::depth_callback, this);
 
         if (USE_IMU)
-            sub_imu = nh.subscribe(IMU_TOPIC, 100, &EstimatorNodelet::imu_callback, this,
+            sub_imu = nh.subscribe(IMU_TOPIC, 1000, &EstimatorNodelet::imu_callback, this,
                                    ros::TransportHints().tcpNoDelay());
         // topic from pose_graph, notify if there's relocalization
         sub_relo_points = nh.subscribe("/pose_graph/match_points", 10,
@@ -290,9 +290,8 @@ private:
                 // http://docs.ros.org/diamondback/api/sensor_msgs/html/image__encodings_8cpp_source.html
                 // color has encoding RGB8
                 cv_bridge::CvImageConstPtr ptr;
-                if (color_msg->encoding ==
-                    "8UC1")  // shan:why 8UC1 need this operation? Find
-                             // answer:https://github.com/ros-perception/vision_opencv/issues/175
+                if (color_msg->encoding == "8UC1")  // shan:why 8UC1 need this operation? Find
+                    // answer:https://github.com/ros-perception/vision_opencv/issues/175
                 {
                     sensor_msgs::Image img;
                     img.header       = color_msg->header;
@@ -511,19 +510,26 @@ private:
 
             // depth has encoding TYPE_16UC1
             cv::Mat depth_img;
-            if (feature_msg.first.second->encoding == "mono16" ||
-                feature_msg.first.second->encoding == "16UC1")
+            if (feature_msg.first.second == nullptr)
             {
-                depth_img = cv_bridge::toCvShare(feature_msg.first.second)->image;
-            }
-            else if (feature_msg.first.second->encoding == "32FC1")
-            {
-                cv::Mat depth_32fc1 = cv_bridge::toCvShare(feature_msg.first.second)->image;
-                depth_32fc1.convertTo(depth_img, CV_16UC1, 1000);
+                depth_img = cv::Mat(ROW, COL, CV_16UC1, cv::Scalar(0));
             }
             else
             {
-                ROS_ASSERT_MSG(1, "Unknown depth encoding!");
+                if (feature_msg.first.second->encoding == "mono16" ||
+                    feature_msg.first.second->encoding == "16UC1")
+                {
+                    depth_img = cv_bridge::toCvShare(feature_msg.first.second)->image;
+                }
+                else if (feature_msg.first.second->encoding == "32FC1")
+                {
+                    cv::Mat depth_32fc1 = cv_bridge::toCvShare(feature_msg.first.second)->image;
+                    depth_32fc1.convertTo(depth_img, CV_16UC1, 1000);
+                }
+                else
+                {
+                    ROS_ASSERT_MSG(1, "Unknown depth encoding!");
+                }
             }
             estimator.f_manager.inputDepth(depth_img);
 
