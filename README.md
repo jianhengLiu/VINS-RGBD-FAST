@@ -11,6 +11,19 @@
 * solved feature clusttering problem result frome FAST feature
 * use "sensor_msg::CompressedImage" as image topic type
   
+## Related Paper:
+```
+@ARTICLE{9830851,  
+  author={Liu, Jianheng and Li, Xuanfu and Liu, Yueqian and Chen, Haoyao},  
+  journal={IEEE Robotics and Automation Letters},  
+  title={RGB-D Inertial Odometry for a Resource-Restricted Robot in Dynamic Environments},   
+  year={2022},  
+  volume={7},  
+  number={4},  
+  pages={9573-9580},  
+  doi={10.1109/LRA.2022.3191193}}
+```
+
 ## RGBD-Inertial Trajectory Estimation and Mapping for Small Ground Rescue Robot
 
 Based one open source SLAM framework [VINS-Mono](https://github.com/HKUST-Aerial-Robotics/VINS-Mono).
@@ -70,6 +83,68 @@ Topics:
 2. `rosbag record /camera/imu /camera/color/image_raw /camera/aligned_depth_to_color/image_raw /camera/color/camera_info /camera/color/image_raw/compressed`
 
 
-## 3. Licence
+## 3. Run with Docker
+
+make Dockerfile like below
+```c
+FROM ros:melodic-ros-core-bionic
+
+# apt-get update
+RUN apt-get update
+
+# install essentials
+RUN apt install -y gcc
+RUN apt install -y g++
+RUN apt-get install -y cmake
+RUN apt-get install -y wget
+RUN apt install -y git
+
+# install ceres
+WORKDIR /home
+RUN apt-get install -y libgoogle-glog-dev libgflags-dev
+RUN apt-get install -y libatlas-base-dev
+RUN apt-get install -y libeigen3-dev
+RUN apt-get install -y libsuitesparse-dev
+RUN wget http://ceres-solver.org/ceres-solver-2.1.0.tar.gz
+RUN tar zxf ceres-solver-2.1.0.tar.gz
+WORKDIR /home/ceres-solver-2.1.0
+RUN mkdir build
+WORKDIR /home/ceres-solver-2.1.0/build
+RUN cmake ..
+RUN make
+RUN make install
+
+# install sophus
+WORKDIR /home
+RUN git clone https://github.com/demul/Sophus.git
+WORKDIR /home/Sophus
+RUN git checkout fix/unit_complex_eror
+RUN mkdir build
+WORKDIR /home/Sophus/build
+RUN cmake ..
+RUN make
+RUN make install
+
+# install ros dependencies
+WORKDIR /home
+RUN mkdir ros_ws
+WORKDIR /home/ros_ws
+RUN apt-get -y install ros-melodic-cv-bridge
+RUN apt-get -y install ros-melodic-nodelet
+RUN apt-get -y install ros-melodic-tf
+RUN apt-get -y install ros-melodic-image-transport
+RUN apt-get -y install ros-melodic-rviz
+
+# build vins-rgbd-fast
+RUN mkdir src
+WORKDIR /home/ros_ws/src
+RUN git clone https://github.com/jianhengLiu/VINS-RGBD-FAST
+WORKDIR /home/ros_ws
+RUN /bin/bash -c ". /opt/ros/melodic/setup.bash; cd /home/ros_ws; catkin_make"
+RUN echo "source /home/ros_ws/devel/setup.bash" >> ~/.bashrc
+```
+docker build .
+
+## 4. Licence
 The source code is released under [GPLv3](http://www.gnu.org/licenses/) license.
 
