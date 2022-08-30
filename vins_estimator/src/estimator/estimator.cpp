@@ -260,7 +260,6 @@ void Estimator::processImage(map<int, Eigen::Matrix<double, 7, 1>> &image,
         else
         {
             f_manager.triangulateWithDepth(Ps, tic, ric);
-            optimization();
 
             if (USE_IMU)
             {
@@ -281,9 +280,14 @@ void Estimator::processImage(map<int, Eigen::Matrix<double, 7, 1>> &image,
                             pre_integrations[j]->repropagate(Vector3d::Zero(), Bgs[j]);
                         }
                         optimization();
+                        updateLatestStates();
                         solver_flag = NON_LINEAR;
                         slideWindow();
                         ROS_INFO("Initialization finish!");
+                        last_R  = Rs[WINDOW_SIZE];
+                        last_P  = Ps[WINDOW_SIZE];
+                        last_R0 = Rs[0];
+                        last_P0 = Ps[0];
                     }
                 }
             }
@@ -609,144 +613,6 @@ bool Estimator::initialStructureWithDepth()
     {
         is_imu_excited = true;
     }
-    TicToc t_sfm;
-    // global sfm
-    Quaterniond        Q[frame_count + 1];
-    Vector3d           T[frame_count + 1];
-    map<int, Vector3d> sfm_tracked_points;
-    vector<SFMFeature> sfm_f;
-    for (auto &it_per_id : f_manager.feature)
-    {
-        int        imu_j = it_per_id.start_frame - 1;
-        SFMFeature tmp_feature;
-        tmp_feature.state = false;
-        tmp_feature.id    = it_per_id.feature_id;
-        for (auto &it_per_frame : it_per_id.feature_per_frame)
-        {
-            imu_j++;
-            Vector3d pts_j = it_per_frame.point;
-            tmp_feature.observation.emplace_back(imu_j, Eigen::Vector2d{pts_j.x(), pts_j.y()});
-            tmp_feature.observation_depth.emplace_back(imu_j, it_per_frame.depth);
-        }
-        sfm_f.push_back(tmp_feature);
-    }
-    Matrix3d relative_R;
-    Vector3d relative_T;
-    int      l;
-    //保证具有足够的视差,由F矩阵恢复Rt
-    //第l帧是从第一帧开始到滑动窗口中第一个满足与当前帧的平均视差足够大的帧，会作为参考帧到下面的全局sfm使用
-    //此处的relative_R，relative_T为当前帧到参考帧（第l帧）的坐标系变换Rt
-    if (!relativePose(relative_R, relative_T, l))
-    {
-        //        ROS_INFO("Not enough features or parallax; Move device
-        //        around");
-        ROS_INFO("Not enough features!");
-        return false;
-    }
-
-    //对窗口中每个图像帧求解sfm问题
-    //得到所有图像帧相对于参考帧的姿态四元数Q、平移向量T和特征点坐标sfm_tracked_points。
-    GlobalSFM sfm;
-    if (!sfm.construct(frame_count + 1, Q, T, l, relative_R, relative_T, sfm_f, sfm_tracked_points))
-    {
-        ROS_DEBUG("global SFM failed!");
-        marginalization_flag = MARGIN_OLD;
-        return false;
-    }
-
-    // solve pnp for all frame
-    //对于所有的图像帧，包括不在滑动窗口中的，提供初始的RT估计，然后solvePnP进行优化,得到每一帧的姿态
-    map<int, Vector3d>::iterator it;
-    frame_it = all_image_frame.begin();
-    for (int i = 0; frame_it != all_image_frame.end(); frame_it++)
-    {
-        // provide initial guess
-        cv::Mat r, rvec, t, D, tmp_r;
-        if ((frame_it->first) == Headers[i])
-        {
-            frame_it->second.is_key_frame = true;
-            frame_it->second.R            = Q[i].toRotationMatrix() * RIC[0].transpose();
-            frame_it->second.T            = T[i];
-            i++;
-            continue;
-        }
-        if ((frame_it->first) > Headers[i])
-        {
-            i++;
-        }
-        Matrix3d R_inital = (Q[i].inverse()).toRotationMatrix();
-        Vector3d P_inital = -R_inital * T[i];
-        cv::eigen2cv(R_inital, tmp_r);
-        cv::Rodrigues(tmp_r, rvec);
-        cv::eigen2cv(P_inital, t);
-
-        frame_it->second.is_key_frame = false;
-        vector<cv::Point3f> pts_3_vector;
-        vector<cv::Point2f> pts_2_vector;
-        // points: map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>>
-        for (auto &id_pts : frame_it->second.points)
-        {
-            int feature_id = id_pts.first;
-            it             = sfm_tracked_points.find(feature_id);
-            if (it != sfm_tracked_points.end())
-            {
-                Vector3d    world_pts = it->second;
-                cv::Point3f pts_3(world_pts(0), world_pts(1), world_pts(2));
-                pts_3_vector.push_back(pts_3);
-                //                Vector2d img_pts = id_pts.second.head<2>();
-                //                cout << endl << "id_pts.second.head<2>():" <<
-                //                id_pts.second.head<2>() << endl; cout << endl
-                //                << "id_pts.second.head<0>():" <<
-                //                id_pts.second.head<0>()
-                //                << endl;
-                cv::Point2f pts_2(id_pts.second(3), id_pts.second(3));
-                pts_2_vector.push_back(pts_2);
-            }
-        }
-        cv::Mat K = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
-        if (pts_3_vector.size() < 6)
-        {
-            cout << "pts_3_vector size " << pts_3_vector.size() << endl;
-            ROS_DEBUG("Not enough points for solve pnp !");
-            return false;
-        }
-        /**
-         *bool cv::solvePnP(    求解pnp问题
-         *   InputArray  objectPoints,   特征点的3D坐标数组
-         *   InputArray  imagePoints,    特征点对应的图像坐标
-         *   InputArray  cameraMatrix,   相机内参矩阵
-         *   InputArray  distCoeffs,     失真系数的输入向量
-         *   OutputArray     rvec,       旋转向量
-         *   OutputArray     tvec,       平移向量
-         *   bool    useExtrinsicGuess = false, 为真则使用提供的初始估计值
-         *   int     flags = SOLVEPNP_ITERATIVE 采用LM优化
-         *)
-         */
-        if (!cv::solvePnP(pts_3_vector, pts_2_vector, K, D, rvec, t, 1))
-        {
-            ROS_DEBUG("solve pnp fail!");
-            return false;
-        }
-        cv::Rodrigues(rvec, r);
-        MatrixXd R_pnp, tmp_R_pnp;
-        cv::cv2eigen(r, tmp_R_pnp);
-        //这里也同样需要将坐标变换矩阵转变成图像帧位姿，并转换为IMU坐标系的位姿
-        R_pnp = tmp_R_pnp.transpose();
-        MatrixXd T_pnp;
-        cv::cv2eigen(t, T_pnp);
-        T_pnp              = R_pnp * (-T_pnp);
-        frame_it->second.R = R_pnp * RIC[0].transpose();
-        frame_it->second.T = T_pnp;
-    }
-    // if (is_imu_excited) {
-    //   if (visualInitialAlignWithDepth())
-    //     return true;
-    // } else {
-    //   staticInitialAlignWithDepth();
-    //   return true;
-    // }
-    // ROS_INFO("misalign visual structure with IMU");
-    // return false;
 
     if (visualInitialAlignWithDepth())
     {
@@ -962,22 +828,6 @@ bool Estimator::visualInitialAlignWithDepth()
         all_image_frame[Headers[i]].is_key_frame = true;
     }
 
-    //将所有特征点的深度置为-1
-    VectorXd dep = f_manager.getDepthVector();
-    for (int i = 0; i < dep.size(); i++)
-        dep[i] = -1;
-    f_manager.clearDepth(dep);
-
-    // triangulat on cam pose , no tic
-    //重新计算特征点的深度
-    Vector3d TIC_TMP[NUM_OF_CAM];
-    for (auto &i : TIC_TMP)
-        i.setZero();
-    ric[0] = RIC[0];
-    f_manager.setRic(ric);
-    // f_manager.triangulate(Ps, &(TIC_TMP[0]), &(RIC[0]));
-    f_manager.triangulateWithDepth(Ps, &(TIC_TMP[0]), &(RIC[0]));
-
     // do repropagate here
     //陀螺仪的偏置bgs改变，重新计算预积分
     for (int i = 0; i <= WINDOW_SIZE; i++)
@@ -1014,10 +864,6 @@ bool Estimator::visualInitialAlignWithDepth()
         Ps[i] = rot_diff * Ps[i];
         Rs[i] = rot_diff * Rs[i];
         Vs[i] = rot_diff * Vs[i];
-        // ROS_ERROR("%d farme's Ps is %f | %f | %f\n", i, Ps[i].x(), Ps[i].y(),
-        //           Ps[i].z()); // shan add
-        // ROS_ERROR("%d farme's Vs is %f | %f | %f\n", i, Vs[i].x(), Vs[i].y(),
-        //           Vs[i].z());
     }
     ROS_DEBUG_STREAM("g0     " << g.transpose());
     ROS_DEBUG_STREAM("my R0  " << Utility::R2ypr(Rs[0]).transpose());
@@ -2127,6 +1973,7 @@ void Estimator::movingConsistencyCheck(set<int> &removeIndex)
         double depth = it_per_id.estimated_depth;
 
         double   err    = 0;
+        double   err3D  = 0;
         int      errCnt = 0;
         int      imu_i = it_per_id.start_frame, imu_j = imu_i - 1;
         Vector3d pts_i = it_per_id.feature_per_frame[0].point;
@@ -2136,17 +1983,17 @@ void Estimator::movingConsistencyCheck(set<int> &removeIndex)
             if (imu_i != imu_j)
             {
                 Vector3d pts_j = it_per_frame.point;
-                double   tmp_error =
-                    reprojectionError(Rs[imu_i], Ps[imu_i], ric[0], tic[0], Rs[imu_j], Ps[imu_j],
-                                      ric[0], tic[0], depth, pts_i, pts_j);
-                err += tmp_error;
+                err += reprojectionError(Rs[imu_i], Ps[imu_i], ric[0], tic[0], Rs[imu_j], Ps[imu_j],
+                                         ric[0], tic[0], depth, pts_i, pts_j);
+
+                err3D += reprojectionError3D(Rs[imu_i], Ps[imu_i], ric[0], tic[0], Rs[imu_j],
+                                             Ps[imu_j], ric[0], tic[0], depth, pts_i, pts_j);
                 errCnt++;
             }
         }
         if (errCnt > 0)
         {
-            double ave_err = err / errCnt;
-            if (ave_err * FOCAL_LENGTH > 10)
+            if (FOCAL_LENGTH * err / errCnt > 10 || err3D / errCnt > 5)
             {
                 removeIndex.insert(it_per_id.feature_id);
                 it_per_id.is_dynamic = true;

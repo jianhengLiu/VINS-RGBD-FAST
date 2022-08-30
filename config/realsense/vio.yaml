@@ -29,18 +29,18 @@ image_width: 640
 image_height: 480
 
 distortion_parameters:
-   k1: 0.0
-   k2: 0.0
-   p1: 0.0
-   p2: 0.0
+   k1: 0.13387871564774004
+   k2: -0.2731913133377051
+   p1: 0.0020296263577681264
+   p2: -0.00044384544608203714
 projection_parameters:
-   fx: 607.6510009765625
-   fy: 607.8088989257812
-   cx: 321.4718933105469
-   cy: 233.74542236328125
+   fx: 604.5821781259577
+   fy: 604.2544712985845
+   cx: 321.2638233484251
+   cy: 239.70969315130674
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Don't know anything about extrinsic parameters. You don't need to give R,T. We will try to calibrate it. Do some rotation movement at beginning.
 #If you choose 0 or 1, you should write down the following matrix.
@@ -49,17 +49,12 @@ extrinsicRotation: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [ 9.3342769984783303e-03, 7.0915647472120646e-03,
-       9.9993128813051546e-01, -9.9989532801979553e-01,
-       1.1121001416579235e-02, 9.2550705928242660e-03,
-       -1.1054604339432283e-02, -9.9991301273507216e-01,
-       7.1946289668098906e-03 ]
+   data: [ 0.02629567, -0.00713751, 0.99962873, -0.99934346, 0.02474397, 0.02646484, -0.02492368, -0.99966834, -0.00648216 ]
 extrinsicTranslation: !!opencv-matrix
    rows: 3
    cols: 1
    dt: d
-   data: [ 1.5294063455597998e-01, 2.3548431453085356e-02,
-       -1.1530213212167922e-01 ]
+   data: [ 0.17336835, 0.049596, -0.10574841 ]
 
 
 #feature traker paprameters
@@ -77,8 +72,8 @@ max_num_iterations: 8   # max solver itrations, to guarantee real time
 keyframe_parallax: 10.0 # keyframe selection threshold (pixel); if system fails frequently, please try to reduce the "keyframe_parallax"  
 
 #imu parameters       The more accurate parameters you provide, the better performance
-acc_n: 0.1          # accelerometer measurement noise standard deviation. 
-gyr_n: 0.5         # gyroscope measurement noise standard deviation.   
+acc_n: 1.0          # accelerometer measurement noise standard deviation. # for high freq vehicle, raise it without hesitation
+gyr_n: 0.01         # gyroscope measurement noise standard deviation.   
 acc_w: 0.001         # accelerometer bias random work noise standard deviation. 
 gyr_w: 0.0001       # gyroscope bias random work noise standard deviation.  
 

@@ -78,12 +78,6 @@ void FeatureTracker::initGridsDetector()
                     else
                         rect = cv::Rect(j * grid_width - 3, i * grid_height - 3, grid_res_width + 3,
                                         grid_res_height + 3);
-                    // if (j < NUM_GRID_COLS - 1)
-                    //   rect = cv::Rect(j * grid_width, i * grid_height, grid_width,
-                    //                   grid_res_height);
-                    // else //右下角这个图像块
-                    //   rect = cv::Rect(j * grid_width, i * grid_height, grid_res_width,
-                    //                   grid_res_height);
                 }
                 grids_rect.emplace_back(rect);
                 grids_track_num.emplace_back(0);

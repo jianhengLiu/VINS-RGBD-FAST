@@ -11,10 +11,6 @@
         <param name="vins_folder" type="string" value="$(arg vins_path)" />
     </node>
 
-    <node pkg="tag_aided_loc" type="tag_aided_loc_node" name="tag_aided_loc_node" output="screen">
-        <remap from="/pose" to="/mavros/vision_pose/pose" />
-    </node>
-
     <!-- <node pkg="nodelet" type="nodelet" name="PoseGraphNodelet" args="load pose_graph/PoseGraphNodelet $(arg manager_name)" output="screen">
         <param name="config_file" type="string" value="$(arg config_path)"/>
         <param name="visualization_shift_x" type="int" value="0"/>
